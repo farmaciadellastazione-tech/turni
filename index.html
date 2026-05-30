@@ -606,7 +606,7 @@ function renderNext() {
   const now = new Date();
   const [h, m] = [now.getHours(), now.getMinutes()];
   let start = new Date(now);
-  if (h >= 8 || (h === 8 && m >= 30)) start.setDate(start.getDate() + 1);
+  if (h > 8 || (h === 8 && m >= 30)) start.setDate(start.getDate() + 1);
   const list = document.getElementById('nextList');
   list.innerHTML = '';
   const G = ['dom','lun','mar','mer','gio','ven','sab'];
