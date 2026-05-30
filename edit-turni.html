@@ -99,23 +99,23 @@
     <div class="modal-body">
       <div class="field">
         <label>Farmacia di turno</label>
-        <select id="fTurno" onchange="checkModified()"></select>
+        <select id="fTurno"></select>
         <div class="field-hint">Lascia vuoto se nessuna farmacia è di turno</div>
       </div>
       <div class="field">
         <label>Contorno (supporto)</label>
-        <select id="fContorno" onchange="checkModified()">
+        <select id="fContorno">
           <option value="">— nessuno —</option>
         </select>
       </div>
       <div class="field">
         <label>Orario fine turno</label>
-        <input type="time" id="fFine" value="08:30" onchange="checkModified()">
+        <input type="time" id="fFine" value="08:30">
         <div class="field-hint">Di norma 08:30 del giorno successivo</div>
       </div>
       <div class="field">
         <label>Apertura straordinaria</label>
-        <input type="text" id="fStraord" placeholder="es. Beretta 8:00–20:00" oninput="checkModified()">
+        <input type="text" id="fStraord" placeholder="es. Beretta 8:00–20:00">
       </div>
       <div class="field">
         <label>Nota libera</label>
@@ -193,6 +193,7 @@ const GIORNI_IT = ['domenica','lunedì','martedì','mercoledì','giovedì','vene
 let overrides = {};
 let viewMonth, viewYear, editKey;
 let dirty = false;
+let modalSnapshot = null;
 
 function toKey(d) {
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -342,12 +343,33 @@ function openModal(key, date) {
   document.getElementById('modalTitle').innerHTML =
     `Modifica turno <span class="modal-date">${G} ${date.getDate()} ${MESI[date.getMonth()].toLowerCase()}</span>`;
   document.getElementById('modalBg').className = 'modal-bg open';
+  modalSnapshot = snapshotModal();
 }
 
-function closeModal() { document.getElementById('modalBg').className = 'modal-bg'; }
-function closeModalBg(e) { if (e.target === document.getElementById('modalBg')) closeModal(); }
+// Stringa che rappresenta lo stato corrente dei campi del modal
+function snapshotModal() {
+  return JSON.stringify([
+    document.getElementById('fTurno').value,
+    document.getElementById('fContorno').value,
+    document.getElementById('fFine').value,
+    document.getElementById('fStraord').value.trim(),
+    document.getElementById('fNota').value.trim()
+  ]);
+}
 
-function checkModified() {}
+function modalIsOpen() { return document.getElementById('modalBg').classList.contains('open'); }
+function modalHasChanges() { return modalIsOpen() && modalSnapshot !== null && snapshotModal() !== modalSnapshot; }
+
+// Chiusura "sicura": avvisa se ci sono modifiche non confermate
+function closeModal() {
+  if (modalHasChanges() && !confirm('Hai modifiche non confermate in questo giorno. Chiudere senza confermarle?')) return;
+  forceCloseModal();
+}
+function forceCloseModal() {
+  modalSnapshot = null;
+  document.getElementById('modalBg').className = 'modal-bg';
+}
+function closeModalBg(e) { if (e.target === document.getElementById('modalBg')) closeModal(); }
 
 function saveDay() {
   const base = TURNI_BASE[editKey];
@@ -374,7 +396,7 @@ function saveDay() {
   }
   dirty = true;
   setStatus('✎ Modifiche non salvate — premi 💾 Salva', false);
-  closeModal();
+  forceCloseModal();
   renderCal();
 }
 
@@ -382,9 +404,14 @@ function resetDay() {
   delete overrides[editKey];
   dirty = true;
   setStatus('✎ Modifiche non salvate — premi 💾 Salva', false);
-  closeModal();
+  forceCloseModal();
   renderCal();
 }
+
+// Avvisa se si chiude/ricarica con modifiche non salvate
+window.addEventListener('beforeunload', (e) => {
+  if (dirty || modalHasChanges()) { e.preventDefault(); e.returnValue = ''; }
+});
 
 // Init
 const now = new Date();
