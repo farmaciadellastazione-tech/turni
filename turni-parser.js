@@ -42,18 +42,24 @@
   }
 
   function parseAnnualText(rawText, anno) {
-    const txt = String(rawText).replace(/\r\n?/g, '\n').replace(/’/g, "'");
+    // Normalizza ogni spazio (newline inclusi) a spazio singolo: cosi' il parsing
+    // funziona sia col testo di pdf-parse (a capo) sia con pdf.js (frammenti) sia con CRLF.
+    const txt = ' ' + String(rawText).replace(/’/g, "'").replace(/\s+/g, ' ').trim() + ' ';
     const ANNO = parseInt(anno, 10);
     const parsed = {};
     const problemi = [];
 
+    // Corpo di un mese: tra l'intestazione del mese e quella del mese successivo
+    // (per dicembre, fino a "GENNAIO <anno+1>" o fine testo).
     function bodyOf(mese, idx) {
-      const start = txt.indexOf('\n' + mese + '\n');
+      const m = ' ' + mese + ' ';
+      const start = txt.indexOf(m);
       if (start === -1) throw new Error('Mese non trovato nel testo: ' + mese);
+      const from = start + m.length;
       let end;
-      if (idx < 11) end = txt.indexOf('\n' + MESI[idx + 1] + '\n', start + 1);
-      else end = txt.indexOf('GENNAIO ' + (ANNO + 1));
-      return txt.slice(start + mese.length + 2, end === -1 ? undefined : end);
+      if (idx < 11) end = txt.indexOf(' ' + MESI[idx + 1] + ' ', from);
+      else end = txt.indexOf(' GENNAIO ' + (ANNO + 1) + ' ', from);
+      return txt.slice(from, end === -1 ? undefined : end);
     }
 
     MESI.forEach((mese, idx) => {
