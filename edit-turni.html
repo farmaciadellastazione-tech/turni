@@ -57,6 +57,8 @@
   .btn-save { flex: 2; background: #2e7d4f; color: #fff; border: none; border-radius: 8px; padding: 11px; font-size: 15px; font-weight: 700; cursor: pointer; }
   .btn-close { position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 22px; color: #aaa; cursor: pointer; }
 </style>
+<script src="turni-parser.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 
@@ -71,6 +73,12 @@
 <div class="token-bar">
   <label>GitHub Token</label>
   <input type="password" id="tokenInput" placeholder="github_pat_..." oninput="saveToken(this.value)">
+</div>
+
+<div style="background:#eef4ff;padding:10px 16px;border-bottom:1px solid #d6e2f5;">
+  <button style="background:#1565c0;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;"
+    onclick="document.getElementById('pdfAnno').click()">📅 Importa calendario annuale (PDF)</button>
+  <input type="file" id="pdfAnno" accept="application/pdf" style="display:none" onchange="importaCalendario(this.files[0])">
 </div>
 
 <div class="status-bar" id="statusBar">Caricamento...</div>
@@ -175,6 +183,11 @@ async function loadFromGist() {
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
+    const bf = data.files['turni-base.json'];
+    if (bf && bf.content) {
+      const b = JSON.parse(bf.content);
+      if (b && Object.keys(b).length) TURNI_BASE = b;
+    }
     overrides = JSON.parse(data.files[GIST_FILE].content).overrides || {};
     const n = Object.keys(overrides).length;
     setStatus(`✓ Caricato — ${n} modific${n===1?'a':'he'} salvat${n===1?'a':'e'}`, false);
@@ -207,6 +220,63 @@ async function saveAll() {
     setStatus('⚠ Errore salvataggio: ' + e.message, true);
   }
   btn.disabled = false; btn.textContent = '💾 Salva';
+}
+
+const PDF_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// Estrae tutto il testo da un PDF nel browser (pdf.js).
+async function estraiTestoPDF(file) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('pdf.js non caricato (serve connessione internet)');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER;
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  let text = '';
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const c = await page.getTextContent();
+    text += c.items.map(i => i.str).join(' ') + ' ';
+  }
+  return text;
+}
+
+// Import del calendario annuale: PDF -> parser condiviso -> base sul Gist.
+async function importaCalendario(file) {
+  if (!file) return;
+  setStatus('Lettura del PDF...', false);
+  try {
+    const text = await estraiTestoPDF(file);
+    const m = text.match(/ANNO\s+(\d{4})/);
+    if (!m) { setStatus('⚠ Anno non trovato nel PDF (manca "ANNO XXXX"). Controlla di aver scelto il calendario annuale.', true); return; }
+    const anno = parseInt(m[1], 10);
+    const { turni, problemi } = TurniParser.parseAnnualText(text, anno);
+    const n = Object.keys(turni).length;
+    if (problemi.length) {
+      console.warn('Giorni non riconosciuti:', problemi);
+      setStatus(`⚠ ${problemi.length} giorni non riconosciuti nel PDF ${anno} — nessun salvataggio. Dettagli nella console.`, true);
+      return;
+    }
+    const token = getToken();
+    if (!token) { setStatus(`✓ PDF letto: ${anno}, ${n} giorni riconosciuti. Inserisci il GitHub Token per salvare sul Gist.`, false); return; }
+    if (!confirm(`Calendario ${anno}: riconosciuti ${n} giorni.\nSalvare la base sul Gist? (sostituisce la base dell'anno ${anno})`)) {
+      setStatus('Import annullato.', false); return;
+    }
+    const merged = Object.assign({}, TURNI_BASE, turni); // mantiene gli altri anni
+    setStatus('Salvataggio base sul Gist...', false);
+    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { 'turni-base.json': { content: JSON.stringify(merged) } } })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    TURNI_BASE = merged;
+    setStatus(`✓ Calendario ${anno} salvato (${n} giorni). La bacheca si aggiornerà entro 5 minuti.`, false);
+    renderCal();
+  } catch (e) {
+    setStatus('⚠ Errore import: ' + e.message, true);
+  } finally {
+    const inp = document.getElementById('pdfAnno');
+    if (inp) inp.value = '';
+  }
 }
 
 function setStatus(msg, err) {

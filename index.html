@@ -156,6 +156,12 @@ async function loadOverrides() {
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
+    // Base dal Gist (se presente): ha la precedenza sul seed locale del repo
+    const bf = data.files['turni-base.json'];
+    if (bf && bf.content) {
+      const b = JSON.parse(bf.content);
+      if (b && Object.keys(b).length) TURNI_BASE = b;
+    }
     const content = data.files[GIST_FILE].content;
     overrides = JSON.parse(content).overrides || {};
     document.getElementById('syncDot').className = 'sync-dot';
