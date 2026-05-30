@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Editor Turni – Farm. Della Stazione</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f1; color: #1a1a1a; font-size: 15px; }
+  .topbar { background: #2e7d4f; color: #fff; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .topbar-title { font-size: 17px; font-weight: 700; }
+  .topbar-sub { font-size: 11px; opacity: 0.8; margin-top: 1px; }
+  .save-btn { background: #fff; color: #2e7d4f; border: none; border-radius: 6px; padding: 7px 16px; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .save-btn:active { opacity: 0.8; }
+  .save-btn:disabled { opacity: 0.5; cursor: default; }
+  .token-bar { background: #fff3cd; padding: 10px 16px; display: flex; gap: 8px; align-items: center; }
+  .token-bar input { flex: 1; border: 1px solid #ccc; border-radius: 6px; padding: 7px 10px; font-size: 13px; font-family: monospace; }
+  .token-bar label { font-size: 12px; font-weight: 600; color: #856404; white-space: nowrap; }
+  .status-bar { padding: 8px 16px; font-size: 12px; color: #555; background: #e8f5e9; border-bottom: 1px solid #c8e6c9; min-height: 34px; }
+  .month-nav { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: #fff; border-bottom: 1px solid #dde8e0; }
+  .month-nav button { background: #f0f4f1; border: 1px solid #ccc; border-radius: 6px; padding: 6px 14px; font-size: 14px; cursor: pointer; }
+  .month-title { font-size: 18px; font-weight: 700; color: #2e7d4f; }
+  .cal { padding: 8px; }
+  .cal-header { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; margin-bottom: 3px; }
+  .cal-hday { text-align: center; font-size: 11px; color: #888; font-weight: 600; padding: 4px 0; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
+  .cal-cell { background: #fff; border-radius: 6px; border: 1.5px solid #e0e0e0; min-height: 56px; padding: 4px; cursor: pointer; position: relative; display: flex; flex-direction: column; }
+  .cal-cell:active { background: #e8f5e9; }
+  .cal-cell.empty { background: none; border-color: transparent; cursor: default; }
+  .cal-cell.today { border-color: #2e7d4f; border-width: 2px; }
+  .cal-cell.modified { border-color: #e65100; }
+  .cal-cell.us { background: #e8f5e9; }
+  .cal-num { font-size: 11px; font-weight: 700; color: #555; }
+  .cal-cell.today .cal-num { color: #2e7d4f; }
+  .cal-farm { font-size: 9px; color: #333; margin-top: 2px; line-height: 1.2; }
+  .cal-farm.us { color: #2e7d4f; font-weight: 700; }
+  .cal-mod-dot { width: 6px; height: 6px; background: #e65100; border-radius: 50%; position: absolute; top: 3px; right: 3px; }
+  .cal-straord { font-size: 8px; color: #1565c0; }
+  .cal-nota { font-size: 8px; color: #880e4f; }
+
+  /* MODAL */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: flex-end; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal { background: #fff; border-radius: 16px 16px 0 0; width: 100%; max-width: 500px; padding: 0 0 24px; max-height: 90vh; overflow-y: auto; }
+  .modal-handle { width: 40px; height: 4px; background: #ccc; border-radius: 2px; margin: 12px auto 8px; }
+  .modal-title { font-size: 16px; font-weight: 700; padding: 0 16px 12px; border-bottom: 1px solid #eee; }
+  .modal-date { font-size: 12px; color: #888; font-weight: 400; }
+  .modal-body { padding: 16px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12px; font-weight: 700; color: #555; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .field input, .field select, .field textarea { width: 100%; border: 1.5px solid #ddd; border-radius: 8px; padding: 10px 12px; font-size: 15px; font-family: inherit; background: #fafafa; }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: #2e7d4f; background: #fff; }
+  .field textarea { resize: none; height: 70px; }
+  .field-hint { font-size: 11px; color: #888; margin-top: 4px; }
+  .modal-actions { display: flex; gap: 8px; padding: 0 16px; margin-top: 4px; }
+  .btn-reset { flex: 1; background: #fff3e0; color: #e65100; border: 1.5px solid #ffcc80; border-radius: 8px; padding: 11px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .btn-save { flex: 2; background: #2e7d4f; color: #fff; border: none; border-radius: 8px; padding: 11px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .btn-close { position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 22px; color: #aaa; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-title">Editor Turni</div>
+    <div class="topbar-sub">Farmacia della Stazione</div>
+  </div>
+  <button class="save-btn" id="saveAllBtn" onclick="saveAll()">💾 Salva</button>
+</div>
+
+<div class="token-bar">
+  <label>GitHub Token</label>
+  <input type="password" id="tokenInput" placeholder="github_pat_..." oninput="saveToken(this.value)">
+</div>
+
+<div class="status-bar" id="statusBar">Caricamento...</div>
+
+<div class="month-nav">
+  <button onclick="changeMonth(-1)">‹</button>
+  <div class="month-title" id="monthTitle">—</div>
+  <button onclick="changeMonth(1)">›</button>
+</div>
+
+<div class="cal">
+  <div class="cal-header">
+    <div class="cal-hday">Lun</div><div class="cal-hday">Mar</div><div class="cal-hday">Mer</div>
+    <div class="cal-hday">Gio</div><div class="cal-hday">Ven</div><div class="cal-hday">Sab</div>
+    <div class="cal-hday">Dom</div>
+  </div>
+  <div class="cal-grid" id="calGrid"></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalBg" onclick="closeModalBg(event)">
+  <div class="modal" id="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modalTitle">—</div>
+    <button class="btn-close" onclick="closeModal()">✕</button>
+    <div class="modal-body">
+      <div class="field">
+        <label>Farmacia di turno</label>
+        <select id="fTurno" onchange="checkModified()"></select>
+        <div class="field-hint">Lascia vuoto se nessuna farmacia è di turno</div>
+      </div>
+      <div class="field">
+        <label>Contorno (supporto)</label>
+        <select id="fContorno" onchange="checkModified()">
+          <option value="">— nessuno —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Orario fine turno</label>
+        <input type="time" id="fFine" value="08:30" onchange="checkModified()">
+        <div class="field-hint">Di norma 08:30 del giorno successivo</div>
+      </div>
+      <div class="field">
+        <label>Apertura straordinaria</label>
+        <input type="text" id="fStraord" placeholder="es. Beretta 8:00–20:00" oninput="checkModified()">
+      </div>
+      <div class="field">
+        <label>Nota libera</label>
+        <textarea id="fNota" placeholder="es. Farmacia in ferie, sostituita da..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-reset" onclick="resetDay()">↩ Ripristina base</button>
+        <button class="btn-save" onclick="saveDay()">✓ Conferma</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const GIST_ID = '8f699fa0fd4566b2bbb2805b76ad482e';
+const GIST_FILE = 'turni-overrides.json';
+const TOKEN_KEY = 'edit_turni_token';
+
+const FARMACIE = [
+  '— nessuna —','Alleanza','Argentieri','Baracchini','Beretta','Bergero','Bonaschi',
+  'Campodonico','Centrale','Croce Bianca','Croce Rossa','Croce Verde','Degli Speziali',
+  'Del Porto','Dell\'Aquila','Dell\'Arsenale','Della Marina','Della Stazione','Di Marola/Maimone',
+  'Di Prima','Farmaceutica','Farina','Felia Prione','Internazionale','Maglio','Migliarina',
+  'S.ta Barbara','Schiaffino','Tapparo','Tarantola'
+];
+
+const TURNI_BASE = {
+  "2026-01-01":{t:"Croce Rossa",c:"Beretta"},
+  "2026-01-02":{t:"Di Marola/Maimone"},
+  "2026-01-03":{t:"Alleanza"},
+  "2026-01-04":{t:"Beretta",c:"Tapparo"},
+  "2026-01-05":{t:"Croce Bianca"},
+  "2026-01-06":{t:"Argentieri",c:"Degli Speziali"},
+  "2026-01-07":{t:"Croce Verde"},
+  "2026-01-08":{t:"Internazionale"},
+  "2026-01-09":{t:"Bonaschi"},
+  "2026-01-10":{t:"Dell'Arsenale"},
+  "2026-01-11":{t:"Di Prima",c:"Dell'Aquila"},
+  "2026-01-12":{t:"Campodonico"},
+  "2026-01-13":{t:"S.ta Barbara"},
+  "2026-01-14":{t:"Schiaffino"},
+  "2026-01-15":{t:"Tarantola"},
+  "2026-01-16":{t:"Felia Prione"},
+  "2026-01-17":{t:"Della Marina"},
+  "2026-01-18":{t:"Della Stazione",c:"Del Porto"},
+  "2026-01-19":{t:"Bergero"},
+  "2026-01-20":{t:"Migliarina"},
+  "2026-01-21":{t:"Beretta"},
+  "2026-01-22":{t:"Maglio"},
+  "2026-01-23":{t:"Baracchini"},
+  "2026-01-24":{t:"Farmaceutica"},
+  "2026-01-25":{t:"Farina",c:"Campodonico"},
+  "2026-01-26":{t:"Di Marola/Maimone"},
+  "2026-01-27":{t:"Di Prima"},
+  "2026-01-28":{t:"Tapparo"},
+  "2026-01-29":{t:"Dell'Arsenale"},
+  "2026-01-30":{t:"Croce Verde"},
+  "2026-01-31":{t:"Centrale"},
+  "2026-02-01":{t:"Argentieri",c:"Croce Verde"},"2026-02-02":{t:"Baracchini"},"2026-02-03":{t:"Dell'Aquila"},"2026-02-04":{t:"Del Porto"},"2026-02-05":{t:"Felia Prione"},"2026-02-06":{t:"Bergero"},"2026-02-07":{t:"Croce Bianca"},"2026-02-08":{t:"Tarantola",c:"Argentieri"},"2026-02-09":{t:"Schiaffino"},"2026-02-10":{t:"Croce Rossa"},"2026-02-11":{t:"Maglio"},"2026-02-12":{t:"Della Marina"},"2026-02-13":{t:"Tapparo"},"2026-02-14":{t:"Della Stazione"},"2026-02-15":{t:"Alleanza",c:"Baracchini"},"2026-02-16":{t:"Di Marola/Maimone"},"2026-02-17":{t:"Farmaceutica"},"2026-02-18":{t:"Farina"},"2026-02-19":{t:"Dell'Arsenale"},"2026-02-20":{t:"Centrale"},"2026-02-21":{t:"Bonaschi"},"2026-02-22":{t:"Croce Verde",c:"Beretta"},"2026-02-23":{t:"Di Prima"},"2026-02-24":{t:"Tarantola"},"2026-02-25":{t:"S.ta Barbara"},"2026-02-26":{t:"Beretta"},"2026-02-27":{t:"Campodonico"},"2026-02-28":{t:"Internazionale"},
+  "2026-03-01":{t:"Di Marola/Maimone",c:"Argentieri"},"2026-03-02":{t:"Del Porto"},"2026-03-03":{t:"Baracchini"},"2026-03-04":{t:"Felia Prione"},"2026-03-05":{t:"Argentieri"},"2026-03-06":{t:"Schiaffino"},"2026-03-07":{t:"Degli Speziali"},"2026-03-08":{t:"Della Marina",c:"Croce Verde"},"2026-03-09":{t:"Dell'Aquila"},"2026-03-10":{t:"Dell'Arsenale"},"2026-03-11":{t:"Centrale"},"2026-03-12":{t:"Campodonico"},"2026-03-13":{t:"Della Stazione"},"2026-03-14":{t:"Maglio"},"2026-03-15":{t:"Croce Bianca",c:"Argentieri"},"2026-03-16":{t:"Croce Verde"},"2026-03-17":{t:"Di Prima"},"2026-03-18":{t:"Farmaceutica"},"2026-03-19":{t:"Internazionale",c:"Bonaschi"},"2026-03-20":{t:"Migliarina"},"2026-03-21":{t:"Tarantola"},"2026-03-22":{t:"Tapparo",c:"Beretta"},"2026-03-23":{t:"S.ta Barbara"},"2026-03-24":{t:"Degli Speziali"},"2026-03-25":{t:"Alleanza"},"2026-03-26":{t:"Felia Prione"},"2026-03-27":{t:"Dell'Aquila"},"2026-03-28":{t:"Farina"},"2026-03-29":{t:"Centrale",c:"Argentieri"},"2026-03-30":{t:"Croce Rossa"},"2026-03-31":{t:"Maglio"},
+  "2026-04-01":{t:"Bonaschi"},"2026-04-02":{t:"Del Porto"},"2026-04-03":{t:"Baracchini"},"2026-04-04":{t:"Di Prima"},"2026-04-05":{t:"Bergero",c:"Croce Bianca"},"2026-04-06":{t:"Migliarina",c:"Croce Verde"},"2026-04-07":{t:"Della Stazione"},"2026-04-08":{t:"Internazionale"},"2026-04-09":{t:"Campodonico"},"2026-04-10":{t:"Tarantola"},"2026-04-11":{t:"Beretta"},"2026-04-12":{t:"Felia Prione",c:"Argentieri"},"2026-04-13":{t:"Farmaceutica"},"2026-04-14":{t:"Argentieri"},"2026-04-15":{t:"S.ta Barbara"},"2026-04-16":{t:"Degli Speziali"},"2026-04-17":{t:"Alleanza"},"2026-04-18":{t:"Di Marola/Maimone"},"2026-04-19":{t:"Bonaschi",c:"Beretta"},"2026-04-20":{t:"Croce Rossa"},"2026-04-21":{t:"Croce Bianca"},"2026-04-22":{t:"Della Stazione"},"2026-04-23":{t:"Farina"},"2026-04-24":{t:"Maglio"},"2026-04-25":{t:"Dell'Arsenale",c:"Centrale"},"2026-04-26":{t:"Dell'Aquila",c:"Beretta"},"2026-04-27":{t:"Della Marina"},"2026-04-28":{t:"Schiaffino"},"2026-04-29":{t:"Tapparo"},"2026-04-30":{t:"Beretta"},
+  "2026-05-01":{t:"Tarantola",c:"S.ta Barbara"},"2026-05-02":{t:"Croce Verde"},"2026-05-03":{t:"Degli Speziali",c:"Argentieri"},"2026-05-04":{t:"Migliarina"},"2026-05-05":{t:"Della Stazione"},"2026-05-06":{t:"Farmaceutica"},"2026-05-07":{t:"Bonaschi"},"2026-05-08":{t:"Croce Bianca"},"2026-05-09":{t:"Felia Prione"},"2026-05-10":{t:"Campodonico",c:"Farina"},"2026-05-11":{t:"Maglio"},"2026-05-12":{t:"Internazionale"},"2026-05-13":{t:"Di Marola/Maimone"},"2026-05-14":{t:"Schiaffino"},"2026-05-15":{t:"Della Marina"},"2026-05-16":{t:"Tapparo"},"2026-05-17":{t:"Del Porto",c:"Della Stazione"},"2026-05-18":{t:"Dell'Aquila"},"2026-05-19":{t:"Bergero"},"2026-05-20":{t:"Baracchini"},"2026-05-21":{t:"Alleanza"},"2026-05-22":{t:"Beretta"},"2026-05-23":{t:"Croce Rossa"},"2026-05-24":{t:"S.ta Barbara",c:"Croce Verde"},"2026-05-25":{t:"Di Prima"},"2026-05-26":{t:"Dell'Arsenale"},"2026-05-27":{t:"Campodonico"},"2026-05-28":{t:"Centrale"},"2026-05-29":{t:"Farina"},"2026-05-30":{t:"Argentieri"},"2026-05-31":{t:"Migliarina",c:"Croce Verde"},
+  "2026-06-01":{t:"Di Marola/Maimone"},"2026-06-02":{t:"Del Porto",c:"Della Stazione"},"2026-06-03":{t:"Schiaffino"},"2026-06-04":{t:"Bergero"},"2026-06-05":{t:"Felia Prione"},"2026-06-06":{t:"Dell'Aquila"},"2026-06-07":{t:"Baracchini",c:"Alleanza"},"2026-06-08":{t:"Croce Rossa"},"2026-06-09":{t:"Bonaschi"},"2026-06-10":{t:"Beretta"},"2026-06-11":{t:"Croce Bianca"},"2026-06-12":{t:"Degli Speziali"},"2026-06-13":{t:"Dell'Arsenale"},"2026-06-14":{t:"Farmaceutica",c:"Argentieri"},"2026-06-15":{t:"Tapparo"},"2026-06-16":{t:"Centrale"},"2026-06-17":{t:"Di Prima"},"2026-06-18":{t:"S.ta Barbara"},"2026-06-19":{t:"Internazionale"},"2026-06-20":{t:"Del Porto"},"2026-06-21":{t:"Della Marina",c:"Croce Verde"},"2026-06-22":{t:"Alleanza"},"2026-06-23":{t:"Croce Verde"},"2026-06-24":{t:"Maglio"},"2026-06-25":{t:"Migliarina"},"2026-06-26":{t:"Tarantola"},"2026-06-27":{t:"Bergero"},"2026-06-28":{t:"Argentieri",c:"Beretta"},"2026-06-29":{t:"Campodonico"},"2026-06-30":{t:"Farina"},
+  "2026-07-01":{t:"Croce Bianca"},"2026-07-02":{t:"Dell'Aquila"},"2026-07-03":{t:"Dell'Arsenale"},"2026-07-04":{t:"S.ta Barbara"},"2026-07-05":{t:"Di Marola/Maimone",c:"Argentieri"},"2026-07-06":{t:"Della Stazione"},"2026-07-07":{t:"Croce Rossa"},"2026-07-08":{t:"Migliarina"},"2026-07-09":{t:"Internazionale"},"2026-07-10":{t:"Bonaschi"},"2026-07-11":{t:"Baracchini"},"2026-07-12":{t:"Farmaceutica",c:"Beretta"},"2026-07-13":{t:"Felia Prione"},"2026-07-14":{t:"Del Porto"},"2026-07-15":{t:"Campodonico"},"2026-07-16":{t:"Farina"},"2026-07-17":{t:"Centrale"},"2026-07-18":{t:"Alleanza"},"2026-07-19":{t:"Tarantola",c:"Argentieri"},"2026-07-20":{t:"Croce Verde"},"2026-07-21":{t:"Tapparo"},"2026-07-22":{t:"Beretta"},"2026-07-23":{t:"Schiaffino"},"2026-07-24":{t:"Maglio"},"2026-07-25":{t:"Dell'Aquila"},"2026-07-26":{t:"Bergero",c:"Croce Bianca"},"2026-07-27":{t:"Degli Speziali"},"2026-07-28":{t:"Argentieri"},"2026-07-29":{t:"Della Marina"},"2026-07-30":{t:"Croce Rossa"},"2026-07-31":{t:"Di Prima"},
+  "2026-08-01":{t:"Centrale"},"2026-08-02":{t:"Della Stazione",c:"Del Porto"},"2026-08-03":{t:"Farmaceutica"},"2026-08-04":{t:"Felia Prione"},"2026-08-05":{t:"Beretta"},"2026-08-06":{t:"Alleanza"},"2026-08-07":{t:"Tarantola"},"2026-08-08":{t:"Schiaffino"},"2026-08-09":{t:"Internazionale",c:"Bonaschi"},"2026-08-10":{t:"Degli Speziali"},"2026-08-11":{t:"Di Marola/Maimone"},"2026-08-12":{t:"Maglio"},"2026-08-13":{t:"Croce Verde"},"2026-08-14":{t:"Croce Bianca"},"2026-08-15":{t:"Dell'Aquila",c:"Farina"},"2026-08-16":{t:"Centrale",c:"Beretta"},"2026-08-17":{t:"Migliarina"},"2026-08-18":{t:"S.ta Barbara"},"2026-08-19":{t:"Di Prima"},"2026-08-20":{t:"Argentieri"},"2026-08-21":{t:"Tapparo"},"2026-08-22":{t:"Della Marina"},"2026-08-23":{t:"Campodonico",c:"Felia Prione"},"2026-08-24":{t:"Tarantola"},"2026-08-25":{t:"Internazionale"},"2026-08-26":{t:"Bonaschi"},"2026-08-27":{t:"Del Porto"},"2026-08-28":{t:"Bergero"},"2026-08-29":{t:"Farmaceutica"},"2026-08-30":{t:"Alleanza",c:"Baracchini"},"2026-08-31":{t:"Farina"},
+  "2026-09-01":{t:"Schiaffino"},"2026-09-02":{t:"Degli Speziali"},"2026-09-03":{t:"Di Marola/Maimone"},"2026-09-04":{t:"Maglio"},"2026-09-05":{t:"Centrale"},"2026-09-06":{t:"Croce Verde",c:"Beretta"},"2026-09-07":{t:"Argentieri"},"2026-09-08":{t:"Della Marina"},"2026-09-09":{t:"Dell'Aquila"},"2026-09-10":{t:"Tapparo"},"2026-09-11":{t:"Bergero"},"2026-09-12":{t:"Della Stazione"},"2026-09-13":{t:"Beretta",c:"Croce Verde"},"2026-09-14":{t:"Felia Prione"},"2026-09-15":{t:"Campodonico"},"2026-09-16":{t:"Tarantola"},"2026-09-17":{t:"Farina"},"2026-09-18":{t:"Farmaceutica"},"2026-09-19":{t:"Bonaschi"},"2026-09-20":{t:"Croce Rossa",c:"Beretta"},"2026-09-21":{t:"Alleanza"},"2026-09-22":{t:"Migliarina"},"2026-09-23":{t:"Dell'Arsenale"},"2026-09-24":{t:"Croce Verde"},"2026-09-25":{t:"Del Porto"},"2026-09-26":{t:"Internazionale"},"2026-09-27":{t:"Bergero",c:"Croce Bianca"},"2026-09-28":{t:"S.ta Barbara"},"2026-09-29":{t:"Baracchini"},"2026-09-30":{t:"Della Stazione"},
+  "2026-10-01":{t:"Di Prima"},"2026-10-02":{t:"Campodonico"},"2026-10-03":{t:"Dell'Aquila"},"2026-10-04":{t:"Beretta",c:"Tapparo"},"2026-10-05":{t:"Della Marina"},"2026-10-06":{t:"Croce Rossa"},"2026-10-07":{t:"Del Porto"},"2026-10-08":{t:"Tarantola"},"2026-10-09":{t:"Argentieri"},"2026-10-10":{t:"Degli Speziali"},"2026-10-11":{t:"Dell'Arsenale",c:"Centrale"},"2026-10-12":{t:"Internazionale"},"2026-10-13":{t:"Di Marola/Maimone"},"2026-10-14":{t:"Croce Bianca"},"2026-10-15":{t:"Farmaceutica"},"2026-10-16":{t:"Croce Verde"},"2026-10-17":{t:"Maglio"},"2026-10-18":{t:"Schiaffino",c:"Felia Prione"},"2026-10-19":{t:"Farina"},"2026-10-20":{t:"Alleanza"},"2026-10-21":{t:"Bergero"},"2026-10-22":{t:"Migliarina"},"2026-10-23":{t:"S.ta Barbara"},"2026-10-24":{t:"Tarantola"},"2026-10-25":{t:"Internazionale",c:"Bonaschi"},"2026-10-26":{t:"Beretta"},"2026-10-27":{t:"Baracchini"},"2026-10-28":{t:"Del Porto"},"2026-10-29":{t:"Della Stazione"},"2026-10-30":{t:"Centrale"},"2026-10-31":{t:"Croce Bianca"},
+  "2026-11-01":{t:"Farmaceutica",c:"Di Marola/Maimone"},"2026-11-02":{t:"Degli Speziali"},"2026-11-03":{t:"Dell'Arsenale"},"2026-11-04":{t:"Della Marina"},"2026-11-05":{t:"Croce Rossa"},"2026-11-06":{t:"Schiaffino"},"2026-11-07":{t:"Beretta"},"2026-11-08":{t:"Di Prima",c:"Dell'Aquila"},"2026-11-09":{t:"Maglio"},"2026-11-10":{t:"Bonaschi"},"2026-11-11":{t:"Internazionale"},"2026-11-12":{t:"Alleanza"},"2026-11-13":{t:"Tapparo"},"2026-11-14":{t:"Croce Verde"},"2026-11-15":{t:"Argentieri",c:"Croce Verde"},"2026-11-16":{t:"Baracchini"},"2026-11-17":{t:"Bergero"},"2026-11-18":{t:"Croce Bianca"},"2026-11-19":{t:"Tarantola"},"2026-11-20":{t:"Farmaceutica"},"2026-11-21":{t:"Felia Prione"},"2026-11-22":{t:"Farina",c:"Campodonico"},"2026-11-23":{t:"Di Prima"},"2026-11-24":{t:"Centrale"},"2026-11-25":{t:"Dell'Arsenale"},"2026-11-26":{t:"S.ta Barbara"},"2026-11-27":{t:"Migliarina"},"2026-11-28":{t:"Di Marola/Maimone"},"2026-11-29":{t:"Della Stazione",c:"Del Porto"},"2026-11-30":{t:"Argentieri"},
+  "2026-12-01":{t:"Baracchini"},"2026-12-02":{t:"Schiaffino"},"2026-12-03":{t:"Della Marina"},"2026-12-04":{t:"Felia Prione"},"2026-12-05":{t:"Tapparo"},"2026-12-06":{t:"Maglio",c:"Tarantola"},"2026-12-07":{t:"Degli Speziali"},"2026-12-08":{t:"Dell'Aquila",c:"Di Prima"},"2026-12-09":{t:"Croce Bianca"},"2026-12-10":{t:"Bergero"},"2026-12-11":{t:"Croce Rossa"},"2026-12-12":{t:"Argentieri"},"2026-12-13":{t:"Croce Verde",c:"Beretta"},"2026-12-14":{t:"Bonaschi"},"2026-12-15":{t:"Internazionale"},"2026-12-16":{t:"S.ta Barbara"},"2026-12-17":{t:"Centrale"},"2026-12-18":{t:"Beretta"},"2026-12-19":{t:"Dell'Arsenale"},"2026-12-20":{t:"Di Marola/Maimone",c:"Argentieri"},"2026-12-21":{t:"Tapparo"},"2026-12-22":{t:"Del Porto"},"2026-12-23":{t:"Della Stazione"},"2026-12-24":{t:"Schiaffino"},"2026-12-25":{t:"Farina",c:"Campodonico"},"2026-12-26":{t:"Baracchini",c:"Alleanza"},"2026-12-27":{t:"Della Marina",c:"Croce Verde"},"2026-12-28":{t:"Dell'Aquila"},"2026-12-29":{t:"Maglio"},"2026-12-30":{t:"Migliarina"},"2026-12-31":{t:"Felia Prione"}
+};
+
+const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const GIORNI_IT = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
+
+let overrides = {};
+let viewMonth, viewYear, editKey;
+let dirty = false;
+
+function toKey(d) {
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
+function saveToken(v) { localStorage.setItem(TOKEN_KEY, v); }
+
+async function loadFromGist() {
+  setStatus('Caricamento dal Gist...', false);
+  try {
+    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      headers: { 'Authorization': 'token ' + getToken(), 'Accept': 'application/vnd.github.v3+json' },
+      cache: 'no-store'
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    overrides = JSON.parse(data.files[GIST_FILE].content).overrides || {};
+    const n = Object.keys(overrides).length;
+    setStatus(`✓ Caricato — ${n} modific${n===1?'a':'he'} salvat${n===1?'a':'e'}`, false);
+  } catch(e) {
+    setStatus('⚠ Impossibile caricare (' + e.message + '). Verifica il token.', true);
+  }
+  renderCal();
+}
+
+async function saveAll() {
+  const token = getToken();
+  if (!token) { setStatus('⚠ Inserisci prima il GitHub Token', true); return; }
+  const btn = document.getElementById('saveAllBtn');
+  btn.disabled = true; btn.textContent = '⏳';
+  setStatus('Salvataggio...', false);
+  try {
+    const payload = { overrides };
+    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': 'token ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(payload, null, 2) } } })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    dirty = false;
+    setStatus('✓ Salvato sul Gist — la bacheca si aggiornerà entro 5 minuti', false);
+  } catch(e) {
+    setStatus('⚠ Errore salvataggio: ' + e.message, true);
+  }
+  btn.disabled = false; btn.textContent = '💾 Salva';
+}
+
+function setStatus(msg, err) {
+  const el = document.getElementById('statusBar');
+  el.textContent = msg;
+  el.style.background = err ? '#ffebee' : '#e8f5e9';
+  el.style.color = err ? '#c62828' : '#1b5e20';
+}
+
+function changeMonth(d) {
+  viewMonth += d;
+  if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+  if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+  renderCal();
+}
+
+function renderCal() {
+  const now = new Date();
+  const todayKey = toKey(now);
+  document.getElementById('monthTitle').textContent = MESI[viewMonth] + ' ' + viewYear;
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  const first = new Date(viewYear, viewMonth, 1);
+  let dow = first.getDay(); if (dow === 0) dow = 7;
+  for (let i = 1; i < dow; i++) {
+    const e = document.createElement('div'); e.className = 'cal-cell empty'; grid.appendChild(e);
+  }
+  const days = new Date(viewYear, viewMonth+1, 0).getDate();
+  for (let d = 1; d <= days; d++) {
+    const date = new Date(viewYear, viewMonth, d);
+    const key = toKey(date);
+    const base = TURNI_BASE[key];
+    const ov = overrides[key];
+    const nome = ov && ov.t !== undefined ? ov.t : (base ? base.t : null);
+    const isUs = nome === 'Della Stazione';
+    const isModified = !!ov;
+    const isToday = key === todayKey;
+    const cell = document.createElement('div');
+    let cls = 'cal-cell';
+    if (isToday) cls += ' today';
+    if (isModified) cls += ' modified';
+    if (isUs) cls += ' us';
+    cell.className = cls;
+    cell.onclick = () => openModal(key, date);
+    cell.innerHTML = `<div class="cal-num">${d}</div>`;
+    if (nome) {
+      const farm = document.createElement('div');
+      farm.className = 'cal-farm' + (isUs ? ' us' : '');
+      const short = nome.length > 9 ? nome.substring(0,9)+'…' : nome;
+      farm.textContent = short;
+      cell.appendChild(farm);
+    }
+    if (ov && ov.straord) {
+      const s = document.createElement('div');
+      s.className = 'cal-straord'; s.textContent = '★'; cell.appendChild(s);
+    }
+    if (ov && ov.nota) {
+      const n = document.createElement('div');
+      n.className = 'cal-nota'; n.textContent = '📌'; cell.appendChild(n);
+    }
+    if (isModified) {
+      const dot = document.createElement('div'); dot.className = 'cal-mod-dot'; cell.appendChild(dot);
+    }
+    grid.appendChild(cell);
+  }
+}
+
+function populateSelects(selectedT, selectedC) {
+  const tEl = document.getElementById('fTurno');
+  const cEl = document.getElementById('fContorno');
+  tEl.innerHTML = '';
+  cEl.innerHTML = '<option value="">— nessuno —</option>';
+  FARMACIE.forEach(f => {
+    const o = document.createElement('option');
+    o.value = f === '— nessuna —' ? '' : f;
+    o.textContent = f;
+    if ((f === '— nessuna —' && !selectedT) || f === selectedT) o.selected = true;
+    tEl.appendChild(o);
+    if (f !== '— nessuna —') {
+      const o2 = document.createElement('option');
+      o2.value = f; o2.textContent = f;
+      if (f === selectedC) o2.selected = true;
+      cEl.appendChild(o2);
+    }
+  });
+}
+
+function openModal(key, date) {
+  editKey = key;
+  const base = TURNI_BASE[key];
+  const ov = overrides[key] || {};
+  const nome = ov.t !== undefined ? ov.t : (base ? base.t : '');
+  const cont = ov.c !== undefined ? ov.c : (base ? (base.c || '') : '');
+  populateSelects(nome, cont);
+  document.getElementById('fFine').value = ov.fineOra || '08:30';
+  document.getElementById('fStraord').value = ov.straord || '';
+  document.getElementById('fNota').value = ov.nota || '';
+  const G = GIORNI_IT[date.getDay()];
+  document.getElementById('modalTitle').innerHTML =
+    `Modifica turno <span class="modal-date">${G} ${date.getDate()} ${MESI[date.getMonth()].toLowerCase()}</span>`;
+  document.getElementById('modalBg').className = 'modal-bg open';
+}
+
+function closeModal() { document.getElementById('modalBg').className = 'modal-bg'; }
+function closeModalBg(e) { if (e.target === document.getElementById('modalBg')) closeModal(); }
+
+function checkModified() {}
+
+function saveDay() {
+  const base = TURNI_BASE[editKey];
+  const t = document.getElementById('fTurno').value;
+  const c = document.getElementById('fContorno').value;
+  const fineOra = document.getElementById('fFine').value;
+  const straord = document.getElementById('fStraord').value.trim();
+  const nota = document.getElementById('fNota').value.trim();
+  const isDefault =
+    t === (base ? base.t : '') &&
+    c === (base ? (base.c || '') : '') &&
+    fineOra === '08:30' &&
+    !straord && !nota;
+  if (isDefault) {
+    delete overrides[editKey];
+  } else {
+    const ov = {};
+    if (t !== (base ? base.t : '')) ov.t = t;
+    if (c !== (base ? (base.c || '') : '')) ov.c = c;
+    if (fineOra !== '08:30') ov.fineOra = fineOra;
+    if (straord) ov.straord = straord;
+    if (nota) ov.nota = nota;
+    overrides[editKey] = ov;
+  }
+  dirty = true;
+  setStatus('✎ Modifiche non salvate — premi 💾 Salva', false);
+  closeModal();
+  renderCal();
+}
+
+function resetDay() {
+  delete overrides[editKey];
+  dirty = true;
+  setStatus('✎ Modifiche non salvate — premi 💾 Salva', false);
+  closeModal();
+  renderCal();
+}
+
+// Init
+const now = new Date();
+viewMonth = now.getMonth();
+viewYear = now.getFullYear();
+const saved = getToken();
+if (saved) document.getElementById('tokenInput').value = saved;
+loadFromGist();
+</script>
+</body>
+</html>

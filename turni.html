@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Farmacia della Stazione – Turni</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #f5f7f5; font-family: 'Segoe UI', Arial, sans-serif; }
+  .page { display: flex; flex-direction: column; height: 100vh; }
+  .header { background: #fff; border-bottom: 3px solid #2e7d4f; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .cross { width: 38px; height: 38px; flex-shrink: 0; }
+  .farm-name { font-size: 22px; font-weight: 700; color: #1a1a1a; line-height: 1; }
+  .farm-info { font-size: 12px; color: #555; margin-top: 3px; display: flex; gap: 14px; }
+  .header-right { text-align: right; }
+  .clock-time { font-size: 30px; font-weight: 700; color: #1a1a1a; line-height: 1; letter-spacing: 1px; }
+  .clock-date { font-size: 11px; color: #666; margin-top: 2px; text-transform: capitalize; }
+  .orari-tag { font-size: 11px; color: #2e7d4f; font-weight: 600; margin-top: 3px; }
+  .body { display: grid; grid-template-columns: 1fr 340px; flex: 1; min-height: 0; }
+  .left { display: flex; flex-direction: column; }
+  .section-bar { background: #2e7d4f; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 6px 16px; flex-shrink: 0; }
+  .turno-main { background: #fff; padding: 14px 16px 10px; border-bottom: 1px solid #e0e8e2; flex-shrink: 0; }
+  .turno-label { font-size: 10px; color: #888; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  .turno-name { font-size: 28px; font-weight: 800; color: #1a1a1a; line-height: 1.1; }
+  .turno-name.is-us { color: #2e7d4f; }
+  .turno-meta { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  .badge-fine { background: #fff3cd; color: #856404; border: 1px solid #ffc107; border-radius: 4px; font-size: 11px; font-weight: 700; padding: 2px 8px; }
+  .badge-contorno { background: #e8f5e9; color: #2e7d4f; border: 1px solid #a5d6a7; border-radius: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; }
+  .badge-straord { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; border-radius: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; }
+  .badge-nota { background: #fce4ec; color: #880e4f; border: 1px solid #f48fb1; border-radius: 4px; font-size: 11px; padding: 2px 8px; }
+  .prossimi { flex: 1; overflow: hidden; }
+  .next-list { padding: 0; }
+  .next-item { display: flex; align-items: center; padding: 7px 16px; border-bottom: 1px solid #f0f4f1; gap: 10px; }
+  .next-day { font-size: 11px; color: #888; width: 80px; flex-shrink: 0; }
+  .next-name { font-size: 14px; color: #222; flex: 1; }
+  .next-name.is-us { color: #2e7d4f; font-weight: 700; }
+  .next-badges { display: flex; gap: 4px; flex-shrink: 0; align-items: center; }
+  .next-fine { font-size: 10px; color: #888; }
+  .next-cont { font-size: 10px; color: #2e7d4f; }
+  .next-mod { font-size: 10px; color: #e65100; font-weight: 600; }
+  .social-bar { background: #f0f4f1; border-top: 1px solid #dde8e0; padding: 7px 16px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+  .social-link { display: flex; align-items: center; gap: 6px; text-decoration: none; color: #333; font-size: 12px; font-weight: 600; }
+  .social-icon { width: 22px; height: 22px; border-radius: 5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .social-icon.web { background: #2e7d4f; }
+  .social-icon.fb { background: #1877f2; }
+  .social-icon.ig { background: linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888); }
+  .social-icon svg { width: 13px; height: 13px; fill: #fff; }
+  .right { display: flex; flex-direction: column; border-left: 2px solid #2e7d4f; background: #fff; }
+  .map-area { flex: 1; overflow: hidden; }
+  .map-iframe { width: 100%; height: 100%; border: none; }
+  .servizi-box { background: #1a3a28; color: #fff; padding: 12px 14px; flex-shrink: 0; }
+  .servizi-title { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #7ec8a0; margin-bottom: 8px; }
+  .servizi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  .servizio-item { background: #2e7d4f; border-radius: 4px; padding: 5px 8px; font-size: 11px; font-weight: 700; text-align: center; color: #fff; }
+  .footer { background: #1a1a1a; color: #aaa; font-size: 10px; padding: 5px 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+  .sync-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #4caf50; margin-right: 5px; vertical-align: middle; }
+  .sync-dot.err { background: #f44336; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="header-left">
+      <svg class="cross" viewBox="0 0 38 38">
+        <rect x="14" y="2" width="10" height="34" fill="#2e7d4f" rx="2"/>
+        <rect x="2" y="14" width="34" height="10" fill="#2e7d4f" rx="2"/>
+        <rect x="16" y="16" width="6" height="6" fill="#fff"/>
+      </svg>
+      <div>
+        <div class="farm-name">Farm. Della Stazione</div>
+        <div class="farm-info">
+          <span>📍 La Spezia (SP) Via Fiume, 75</span>
+          <span>📞 0187706147</span>
+        </div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="clock-time" id="clockTime">--:--</div>
+      <div class="clock-date" id="clockDate">—</div>
+      <div class="orari-tag">Lun–Sab: 08:30–19:30</div>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="left">
+      <div class="section-bar">Farmacia di turno · Pharmacy on duty</div>
+      <div class="turno-main">
+        <div class="turno-label">Adesso</div>
+        <div class="turno-name" id="todayName">—</div>
+        <div class="turno-meta" id="todayMeta"></div>
+      </div>
+      <div class="section-bar">Prossimi turni · Upcoming</div>
+      <div class="prossimi"><div class="next-list" id="nextList"></div></div>
+      <div class="social-bar">
+        <a class="social-link" href="https://farmaciadellastazionespezia.it" target="_blank">
+          <span class="social-icon web"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></span>
+          farmaciadellastazionespezia.it
+        </a>
+        <a class="social-link" href="https://www.facebook.com/farmaciadellastazione/" target="_blank">
+          <span class="social-icon fb"><svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></span>
+          Facebook
+        </a>
+        <a class="social-link" href="https://www.instagram.com/farmaciadellastazionespezia" target="_blank">
+          <span class="social-icon ig"><svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></span>
+          Instagram
+        </a>
+      </div>
+    </div>
+    <div class="right">
+      <div class="map-area">
+        <iframe class="map-iframe"
+          src="https://www.openstreetmap.org/export/embed.html?bbox=9.780,44.080,9.870,44.120&layer=mapnik&marker=44.1014,9.8233"
+          allowfullscreen></iframe>
+      </div>
+      <div class="servizi-box">
+        <div class="servizi-title">• Servizi •</div>
+        <div class="servizi-grid">
+          <div class="servizio-item">Holter ECG</div>
+          <div class="servizio-item">Holter Pressorio</div>
+          <div class="servizio-item">Elettrocardiogramma</div>
+          <div class="servizio-item">Misurazione PA</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span id="syncStatus"><span class="sync-dot" id="syncDot"></span><span id="syncText">—</span></span>
+    <span>Il servizio a battenti chiusi è solo per medicinali urgenti · Diritto fisso: DIURNO €7,50 – NOTTURNO €10,00 (Art. 9 D.M. 22/09/2017)</span>
+    <span id="footerClock">—</span>
+  </div>
+</div>
+
+<script>
+const GIST_ID = '8f699fa0fd4566b2bbb2805b76ad482e';
+const GIST_FILE = 'turni-overrides.json';
+
+const TURNI_BASE = {
+  "2026-01-01":{t:"Croce Rossa",c:"Beretta"},
+  "2026-01-02":{t:"Di Marola/Maimone"},
+  "2026-01-03":{t:"Alleanza"},
+  "2026-01-04":{t:"Beretta",c:"Tapparo"},
+  "2026-01-05":{t:"Croce Bianca"},
+  "2026-01-06":{t:"Argentieri",c:"Degli Speziali"},
+  "2026-01-07":{t:"Croce Verde"},
+  "2026-01-08":{t:"Internazionale"},
+  "2026-01-09":{t:"Bonaschi"},
+  "2026-01-10":{t:"Dell'Arsenale"},
+  "2026-01-11":{t:"Di Prima",c:"Dell'Aquila"},
+  "2026-01-12":{t:"Campodonico"},
+  "2026-01-13":{t:"S.ta Barbara"},
+  "2026-01-14":{t:"Schiaffino"},
+  "2026-01-15":{t:"Tarantola"},
+  "2026-01-16":{t:"Felia Prione"},
+  "2026-01-17":{t:"Della Marina"},
+  "2026-01-18":{t:"Della Stazione",c:"Del Porto"},
+  "2026-01-19":{t:"Bergero"},
+  "2026-01-20":{t:"Migliarina"},
+  "2026-01-21":{t:"Beretta"},
+  "2026-01-22":{t:"Maglio"},
+  "2026-01-23":{t:"Baracchini"},
+  "2026-01-24":{t:"Farmaceutica"},
+  "2026-01-25":{t:"Farina",c:"Campodonico"},
+  "2026-01-26":{t:"Di Marola/Maimone"},
+  "2026-01-27":{t:"Di Prima"},
+  "2026-01-28":{t:"Tapparo"},
+  "2026-01-29":{t:"Dell'Arsenale"},
+  "2026-01-30":{t:"Croce Verde"},
+  "2026-01-31":{t:"Centrale"},
+  "2026-02-01":{t:"Argentieri",c:"Croce Verde"},
+  "2026-02-02":{t:"Baracchini"},
+  "2026-02-03":{t:"Dell'Aquila"},
+  "2026-02-04":{t:"Del Porto"},
+  "2026-02-05":{t:"Felia Prione"},
+  "2026-02-06":{t:"Bergero"},
+  "2026-02-07":{t:"Croce Bianca"},
+  "2026-02-08":{t:"Tarantola",c:"Argentieri"},
+  "2026-02-09":{t:"Schiaffino"},
+  "2026-02-10":{t:"Croce Rossa"},
+  "2026-02-11":{t:"Maglio"},
+  "2026-02-12":{t:"Della Marina"},
+  "2026-02-13":{t:"Tapparo"},
+  "2026-02-14":{t:"Della Stazione"},
+  "2026-02-15":{t:"Alleanza",c:"Baracchini"},
+  "2026-02-16":{t:"Di Marola/Maimone"},
+  "2026-02-17":{t:"Farmaceutica"},
+  "2026-02-18":{t:"Farina"},
+  "2026-02-19":{t:"Dell'Arsenale"},
+  "2026-02-20":{t:"Centrale"},
+  "2026-02-21":{t:"Bonaschi"},
+  "2026-02-22":{t:"Croce Verde",c:"Beretta"},
+  "2026-02-23":{t:"Di Prima"},
+  "2026-02-24":{t:"Tarantola"},
+  "2026-02-25":{t:"S.ta Barbara"},
+  "2026-02-26":{t:"Beretta"},
+  "2026-02-27":{t:"Campodonico"},
+  "2026-02-28":{t:"Internazionale"},
+  "2026-03-01":{t:"Di Marola/Maimone",c:"Argentieri"},
+  "2026-03-02":{t:"Del Porto"},
+  "2026-03-03":{t:"Baracchini"},
+  "2026-03-04":{t:"Felia Prione"},
+  "2026-03-05":{t:"Argentieri"},
+  "2026-03-06":{t:"Schiaffino"},
+  "2026-03-07":{t:"Degli Speziali"},
+  "2026-03-08":{t:"Della Marina",c:"Croce Verde"},
+  "2026-03-09":{t:"Dell'Aquila"},
+  "2026-03-10":{t:"Dell'Arsenale"},
+  "2026-03-11":{t:"Centrale"},
+  "2026-03-12":{t:"Campodonico"},
+  "2026-03-13":{t:"Della Stazione"},
+  "2026-03-14":{t:"Maglio"},
+  "2026-03-15":{t:"Croce Bianca",c:"Argentieri"},
+  "2026-03-16":{t:"Croce Verde"},
+  "2026-03-17":{t:"Di Prima"},
+  "2026-03-18":{t:"Farmaceutica"},
+  "2026-03-19":{t:"Internazionale",c:"Bonaschi"},
+  "2026-03-20":{t:"Migliarina"},
+  "2026-03-21":{t:"Tarantola"},
+  "2026-03-22":{t:"Tapparo",c:"Beretta"},
+  "2026-03-23":{t:"S.ta Barbara"},
+  "2026-03-24":{t:"Degli Speziali"},
+  "2026-03-25":{t:"Alleanza"},
+  "2026-03-26":{t:"Felia Prione"},
+  "2026-03-27":{t:"Dell'Aquila"},
+  "2026-03-28":{t:"Farina"},
+  "2026-03-29":{t:"Centrale",c:"Argentieri"},
+  "2026-03-30":{t:"Croce Rossa"},
+  "2026-03-31":{t:"Maglio"},
+  "2026-04-01":{t:"Bonaschi"},
+  "2026-04-02":{t:"Del Porto"},
+  "2026-04-03":{t:"Baracchini"},
+  "2026-04-04":{t:"Di Prima"},
+  "2026-04-05":{t:"Bergero",c:"Croce Bianca"},
+  "2026-04-06":{t:"Migliarina",c:"Croce Verde"},
+  "2026-04-07":{t:"Della Stazione"},
+  "2026-04-08":{t:"Internazionale"},
+  "2026-04-09":{t:"Campodonico"},
+  "2026-04-10":{t:"Tarantola"},
+  "2026-04-11":{t:"Beretta"},
+  "2026-04-12":{t:"Felia Prione",c:"Argentieri"},
+  "2026-04-13":{t:"Farmaceutica"},
+  "2026-04-14":{t:"Argentieri"},
+  "2026-04-15":{t:"S.ta Barbara"},
+  "2026-04-16":{t:"Degli Speziali"},
+  "2026-04-17":{t:"Alleanza"},
+  "2026-04-18":{t:"Di Marola/Maimone"},
+  "2026-04-19":{t:"Bonaschi",c:"Beretta"},
+  "2026-04-20":{t:"Croce Rossa"},
+  "2026-04-21":{t:"Croce Bianca"},
+  "2026-04-22":{t:"Della Stazione"},
+  "2026-04-23":{t:"Farina"},
+  "2026-04-24":{t:"Maglio"},
+  "2026-04-25":{t:"Dell'Arsenale",c:"Centrale"},
+  "2026-04-26":{t:"Dell'Aquila",c:"Beretta"},
+  "2026-04-27":{t:"Della Marina"},
+  "2026-04-28":{t:"Schiaffino"},
+  "2026-04-29":{t:"Tapparo"},
+  "2026-04-30":{t:"Beretta"},
+  "2026-05-01":{t:"Tarantola",c:"S.ta Barbara"},
+  "2026-05-02":{t:"Croce Verde"},
+  "2026-05-03":{t:"Degli Speziali",c:"Argentieri"},
+  "2026-05-04":{t:"Migliarina"},
+  "2026-05-05":{t:"Della Stazione"},
+  "2026-05-06":{t:"Farmaceutica"},
+  "2026-05-07":{t:"Bonaschi"},
+  "2026-05-08":{t:"Croce Bianca"},
+  "2026-05-09":{t:"Felia Prione"},
+  "2026-05-10":{t:"Campodonico",c:"Farina"},
+  "2026-05-11":{t:"Maglio"},
+  "2026-05-12":{t:"Internazionale"},
+  "2026-05-13":{t:"Di Marola/Maimone"},
+  "2026-05-14":{t:"Schiaffino"},
+  "2026-05-15":{t:"Della Marina"},
+  "2026-05-16":{t:"Tapparo"},
+  "2026-05-17":{t:"Del Porto",c:"Della Stazione"},
+  "2026-05-18":{t:"Dell'Aquila"},
+  "2026-05-19":{t:"Bergero"},
+  "2026-05-20":{t:"Baracchini"},
+  "2026-05-21":{t:"Alleanza"},
+  "2026-05-22":{t:"Beretta"},
+  "2026-05-23":{t:"Croce Rossa"},
+  "2026-05-24":{t:"S.ta Barbara",c:"Croce Verde"},
+  "2026-05-25":{t:"Di Prima"},
+  "2026-05-26":{t:"Dell'Arsenale"},
+  "2026-05-27":{t:"Campodonico"},
+  "2026-05-28":{t:"Centrale"},
+  "2026-05-29":{t:"Farina"},
+  "2026-05-30":{t:"Argentieri"},
+  "2026-05-31":{t:"Migliarina",c:"Croce Verde"},
+  "2026-06-01":{t:"Di Marola/Maimone"},
+  "2026-06-02":{t:"Del Porto",c:"Della Stazione"},
+  "2026-06-03":{t:"Schiaffino"},
+  "2026-06-04":{t:"Bergero"},
+  "2026-06-05":{t:"Felia Prione"},
+  "2026-06-06":{t:"Dell'Aquila"},
+  "2026-06-07":{t:"Baracchini",c:"Alleanza"},
+  "2026-06-08":{t:"Croce Rossa"},
+  "2026-06-09":{t:"Bonaschi"},
+  "2026-06-10":{t:"Beretta"},
+  "2026-06-11":{t:"Croce Bianca"},
+  "2026-06-12":{t:"Degli Speziali"},
+  "2026-06-13":{t:"Dell'Arsenale"},
+  "2026-06-14":{t:"Farmaceutica",c:"Argentieri"},
+  "2026-06-15":{t:"Tapparo"},
+  "2026-06-16":{t:"Centrale"},
+  "2026-06-17":{t:"Di Prima"},
+  "2026-06-18":{t:"S.ta Barbara"},
+  "2026-06-19":{t:"Internazionale"},
+  "2026-06-20":{t:"Del Porto"},
+  "2026-06-21":{t:"Della Marina",c:"Croce Verde"},
+  "2026-06-22":{t:"Alleanza"},
+  "2026-06-23":{t:"Croce Verde"},
+  "2026-06-24":{t:"Maglio"},
+  "2026-06-25":{t:"Migliarina"},
+  "2026-06-26":{t:"Tarantola"},
+  "2026-06-27":{t:"Bergero"},
+  "2026-06-28":{t:"Argentieri",c:"Beretta"},
+  "2026-06-29":{t:"Campodonico"},
+  "2026-06-30":{t:"Farina"},
+  "2026-07-01":{t:"Croce Bianca"},
+  "2026-07-02":{t:"Dell'Aquila"},
+  "2026-07-03":{t:"Dell'Arsenale"},
+  "2026-07-04":{t:"S.ta Barbara"},
+  "2026-07-05":{t:"Di Marola/Maimone",c:"Argentieri"},
+  "2026-07-06":{t:"Della Stazione"},
+  "2026-07-07":{t:"Croce Rossa"},
+  "2026-07-08":{t:"Migliarina"},
+  "2026-07-09":{t:"Internazionale"},
+  "2026-07-10":{t:"Bonaschi"},
+  "2026-07-11":{t:"Baracchini"},
+  "2026-07-12":{t:"Farmaceutica",c:"Beretta"},
+  "2026-07-13":{t:"Felia Prione"},
+  "2026-07-14":{t:"Del Porto"},
+  "2026-07-15":{t:"Campodonico"},
+  "2026-07-16":{t:"Farina"},
+  "2026-07-17":{t:"Centrale"},
+  "2026-07-18":{t:"Alleanza"},
+  "2026-07-19":{t:"Tarantola",c:"Argentieri"},
+  "2026-07-20":{t:"Croce Verde"},
+  "2026-07-21":{t:"Tapparo"},
+  "2026-07-22":{t:"Beretta"},
+  "2026-07-23":{t:"Schiaffino"},
+  "2026-07-24":{t:"Maglio"},
+  "2026-07-25":{t:"Dell'Aquila"},
+  "2026-07-26":{t:"Bergero",c:"Croce Bianca"},
+  "2026-07-27":{t:"Degli Speziali"},
+  "2026-07-28":{t:"Argentieri"},
+  "2026-07-29":{t:"Della Marina"},
+  "2026-07-30":{t:"Croce Rossa"},
+  "2026-07-31":{t:"Di Prima"},
+  "2026-08-01":{t:"Centrale"},
+  "2026-08-02":{t:"Della Stazione",c:"Del Porto"},
+  "2026-08-03":{t:"Farmaceutica"},
+  "2026-08-04":{t:"Felia Prione"},
+  "2026-08-05":{t:"Beretta"},
+  "2026-08-06":{t:"Alleanza"},
+  "2026-08-07":{t:"Tarantola"},
+  "2026-08-08":{t:"Schiaffino"},
+  "2026-08-09":{t:"Internazionale",c:"Bonaschi"},
+  "2026-08-10":{t:"Degli Speziali"},
+  "2026-08-11":{t:"Di Marola/Maimone"},
+  "2026-08-12":{t:"Maglio"},
+  "2026-08-13":{t:"Croce Verde"},
+  "2026-08-14":{t:"Croce Bianca"},
+  "2026-08-15":{t:"Dell'Aquila",c:"Farina"},
+  "2026-08-16":{t:"Centrale",c:"Beretta"},
+  "2026-08-17":{t:"Migliarina"},
+  "2026-08-18":{t:"S.ta Barbara"},
+  "2026-08-19":{t:"Di Prima"},
+  "2026-08-20":{t:"Argentieri"},
+  "2026-08-21":{t:"Tapparo"},
+  "2026-08-22":{t:"Della Marina"},
+  "2026-08-23":{t:"Campodonico",c:"Felia Prione"},
+  "2026-08-24":{t:"Tarantola"},
+  "2026-08-25":{t:"Internazionale"},
+  "2026-08-26":{t:"Bonaschi"},
+  "2026-08-27":{t:"Del Porto"},
+  "2026-08-28":{t:"Bergero"},
+  "2026-08-29":{t:"Farmaceutica"},
+  "2026-08-30":{t:"Alleanza",c:"Baracchini"},
+  "2026-08-31":{t:"Farina"},
+  "2026-09-01":{t:"Schiaffino"},
+  "2026-09-02":{t:"Degli Speziali"},
+  "2026-09-03":{t:"Di Marola/Maimone"},
+  "2026-09-04":{t:"Maglio"},
+  "2026-09-05":{t:"Centrale"},
+  "2026-09-06":{t:"Croce Verde",c:"Beretta"},
+  "2026-09-07":{t:"Argentieri"},
+  "2026-09-08":{t:"Della Marina"},
+  "2026-09-09":{t:"Dell'Aquila"},
+  "2026-09-10":{t:"Tapparo"},
+  "2026-09-11":{t:"Bergero"},
+  "2026-09-12":{t:"Della Stazione"},
+  "2026-09-13":{t:"Beretta",c:"Croce Verde"},
+  "2026-09-14":{t:"Felia Prione"},
+  "2026-09-15":{t:"Campodonico"},
+  "2026-09-16":{t:"Tarantola"},
+  "2026-09-17":{t:"Farina"},
+  "2026-09-18":{t:"Farmaceutica"},
+  "2026-09-19":{t:"Bonaschi"},
+  "2026-09-20":{t:"Croce Rossa",c:"Beretta"},
+  "2026-09-21":{t:"Alleanza"},
+  "2026-09-22":{t:"Migliarina"},
+  "2026-09-23":{t:"Dell'Arsenale"},
+  "2026-09-24":{t:"Croce Verde"},
+  "2026-09-25":{t:"Del Porto"},
+  "2026-09-26":{t:"Internazionale"},
+  "2026-09-27":{t:"Bergero",c:"Croce Bianca"},
+  "2026-09-28":{t:"S.ta Barbara"},
+  "2026-09-29":{t:"Baracchini"},
+  "2026-09-30":{t:"Della Stazione"},
+  "2026-10-01":{t:"Di Prima"},
+  "2026-10-02":{t:"Campodonico"},
+  "2026-10-03":{t:"Dell'Aquila"},
+  "2026-10-04":{t:"Beretta",c:"Tapparo"},
+  "2026-10-05":{t:"Della Marina"},
+  "2026-10-06":{t:"Croce Rossa"},
+  "2026-10-07":{t:"Del Porto"},
+  "2026-10-08":{t:"Tarantola"},
+  "2026-10-09":{t:"Argentieri"},
+  "2026-10-10":{t:"Degli Speziali"},
+  "2026-10-11":{t:"Dell'Arsenale",c:"Centrale"},
+  "2026-10-12":{t:"Internazionale"},
+  "2026-10-13":{t:"Di Marola/Maimone"},
+  "2026-10-14":{t:"Croce Bianca"},
+  "2026-10-15":{t:"Farmaceutica"},
+  "2026-10-16":{t:"Croce Verde"},
+  "2026-10-17":{t:"Maglio"},
+  "2026-10-18":{t:"Schiaffino",c:"Felia Prione"},
+  "2026-10-19":{t:"Farina"},
+  "2026-10-20":{t:"Alleanza"},
+  "2026-10-21":{t:"Bergero"},
+  "2026-10-22":{t:"Migliarina"},
+  "2026-10-23":{t:"S.ta Barbara"},
+  "2026-10-24":{t:"Tarantola"},
+  "2026-10-25":{t:"Internazionale",c:"Bonaschi"},
+  "2026-10-26":{t:"Beretta"},
+  "2026-10-27":{t:"Baracchini"},
+  "2026-10-28":{t:"Del Porto"},
+  "2026-10-29":{t:"Della Stazione"},
+  "2026-10-30":{t:"Centrale"},
+  "2026-10-31":{t:"Croce Bianca"},
+  "2026-11-01":{t:"Farmaceutica",c:"Di Marola/Maimone"},
+  "2026-11-02":{t:"Degli Speziali"},
+  "2026-11-03":{t:"Dell'Arsenale"},
+  "2026-11-04":{t:"Della Marina"},
+  "2026-11-05":{t:"Croce Rossa"},
+  "2026-11-06":{t:"Schiaffino"},
+  "2026-11-07":{t:"Beretta"},
+  "2026-11-08":{t:"Di Prima",c:"Dell'Aquila"},
+  "2026-11-09":{t:"Maglio"},
+  "2026-11-10":{t:"Bonaschi"},
+  "2026-11-11":{t:"Internazionale"},
+  "2026-11-12":{t:"Alleanza"},
+  "2026-11-13":{t:"Tapparo"},
+  "2026-11-14":{t:"Croce Verde"},
+  "2026-11-15":{t:"Argentieri",c:"Croce Verde"},
+  "2026-11-16":{t:"Baracchini"},
+  "2026-11-17":{t:"Bergero"},
+  "2026-11-18":{t:"Croce Bianca"},
+  "2026-11-19":{t:"Tarantola"},
+  "2026-11-20":{t:"Farmaceutica"},
+  "2026-11-21":{t:"Felia Prione"},
+  "2026-11-22":{t:"Farina",c:"Campodonico"},
+  "2026-11-23":{t:"Di Prima"},
+  "2026-11-24":{t:"Centrale"},
+  "2026-11-25":{t:"Dell'Arsenale"},
+  "2026-11-26":{t:"S.ta Barbara"},
+  "2026-11-27":{t:"Migliarina"},
+  "2026-11-28":{t:"Di Marola/Maimone"},
+  "2026-11-29":{t:"Della Stazione",c:"Del Porto"},
+  "2026-11-30":{t:"Argentieri"},
+  "2026-12-01":{t:"Baracchini"},
+  "2026-12-02":{t:"Schiaffino"},
+  "2026-12-03":{t:"Della Marina"},
+  "2026-12-04":{t:"Felia Prione"},
+  "2026-12-05":{t:"Tapparo"},
+  "2026-12-06":{t:"Maglio",c:"Tarantola"},
+  "2026-12-07":{t:"Degli Speziali"},
+  "2026-12-08":{t:"Dell'Aquila",c:"Di Prima"},
+  "2026-12-09":{t:"Croce Bianca"},
+  "2026-12-10":{t:"Bergero"},
+  "2026-12-11":{t:"Croce Rossa"},
+  "2026-12-12":{t:"Argentieri"},
+  "2026-12-13":{t:"Croce Verde",c:"Beretta"},
+  "2026-12-14":{t:"Bonaschi"},
+  "2026-12-15":{t:"Internazionale"},
+  "2026-12-16":{t:"S.ta Barbara"},
+  "2026-12-17":{t:"Centrale"},
+  "2026-12-18":{t:"Beretta"},
+  "2026-12-19":{t:"Dell'Arsenale"},
+  "2026-12-20":{t:"Di Marola/Maimone",c:"Argentieri"},
+  "2026-12-21":{t:"Tapparo"},
+  "2026-12-22":{t:"Del Porto"},
+  "2026-12-23":{t:"Della Stazione"},
+  "2026-12-24":{t:"Schiaffino"},
+  "2026-12-25":{t:"Farina",c:"Campodonico"},
+  "2026-12-26":{t:"Baracchini",c:"Alleanza"},
+  "2026-12-27":{t:"Della Marina",c:"Croce Verde"},
+  "2026-12-28":{t:"Dell'Aquila"},
+  "2026-12-29":{t:"Maglio"},
+  "2026-12-30":{t:"Migliarina"},
+  "2026-12-31":{t:"Felia Prione"}
+};
+
+let overrides = {};
+
+async function loadOverrides() {
+  try {
+    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      headers: { 'Accept': 'application/vnd.github.v3+json' },
+      cache: 'no-store'
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const content = data.files[GIST_FILE].content;
+    overrides = JSON.parse(content).overrides || {};
+    document.getElementById('syncDot').className = 'sync-dot';
+    document.getElementById('syncText').textContent = 'Aggiornato ' + new Date().toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'});
+  } catch(e) {
+    document.getElementById('syncDot').className = 'sync-dot err';
+    document.getElementById('syncText').textContent = 'Dati locali (offline)';
+  }
+  renderAll();
+}
+
+function getTurnoGiorno(key) {
+  const base = TURNI_BASE[key] || null;
+  const ov = overrides[key] || {};
+  if (!base && !ov.t) return null;
+  return {
+    t: ov.t !== undefined ? ov.t : (base ? base.t : null),
+    c: ov.c !== undefined ? ov.c : (base ? base.c : undefined),
+    fineOra: ov.fineOra || '08:30',
+    straord: ov.straord || null,
+    nota: ov.nota || null,
+    modificato: !!(ov.t !== undefined || ov.c !== undefined || ov.fineOra || ov.straord || ov.nota)
+  };
+}
+
+function toKey(d) {
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function getTurnoAttivo() {
+  const now = new Date();
+  const [h, m] = [now.getHours(), now.getMinutes()];
+  let d = new Date(now);
+  if (h < 8 || (h === 8 && m < 30)) d.setDate(d.getDate() - 1);
+  const key = toKey(d);
+  const turno = getTurnoGiorno(key);
+  const fine = new Date(d);
+  fine.setDate(fine.getDate() + 1);
+  const [fh, fm] = (turno && turno.fineOra ? turno.fineOra : '08:30').split(':').map(Number);
+  fine.setHours(fh, fm, 0, 0);
+  return { turno, fine, key };
+}
+
+function fmtFine(d, ora) {
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  return `Fine turno: ${dd}/${mm} ore ${ora || '8:30'}`;
+}
+
+function fmtDate(d) {
+  const G = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
+  const M = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+  return `${G[d.getDay()]} ${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function updateClock() {
+  const now = new Date();
+  const t = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('clockTime').textContent = t;
+  document.getElementById('clockDate').textContent = fmtDate(now);
+  document.getElementById('footerClock').textContent =
+    String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear()+' '+t;
+}
+
+function renderToday() {
+  const { turno, fine } = getTurnoAttivo();
+  const meta = document.getElementById('todayMeta');
+  meta.innerHTML = '';
+  if (!turno || !turno.t) {
+    document.getElementById('todayName').textContent = 'Nessun dato';
+    return;
+  }
+  const isUs = turno.t === 'Della Stazione';
+  const nameEl = document.getElementById('todayName');
+  nameEl.textContent = 'Farm. ' + turno.t;
+  nameEl.className = 'turno-name' + (isUs ? ' is-us' : '');
+
+  const addBadge = (cls, txt) => {
+    const s = document.createElement('span');
+    s.className = cls; s.textContent = txt; meta.appendChild(s);
+  };
+  addBadge('badge-fine', fmtFine(fine, turno.fineOra));
+  if (turno.c) addBadge('badge-contorno', 'Contorno: Farm. ' + turno.c);
+  if (turno.straord) addBadge('badge-straord', '★ ' + turno.straord);
+  if (turno.nota) addBadge('badge-nota', '📌 ' + turno.nota);
+  if (turno.modificato) addBadge('badge-nota', '✎ modificato');
+}
+
+function renderNext() {
+  const now = new Date();
+  const [h, m] = [now.getHours(), now.getMinutes()];
+  let start = new Date(now);
+  if (h >= 8 || (h === 8 && m >= 30)) start.setDate(start.getDate() + 1);
+  const list = document.getElementById('nextList');
+  list.innerHTML = '';
+  const G = ['dom','lun','mar','mer','gio','ven','sab'];
+  let count = 0, d = new Date(start);
+  while (count < 7 && d.getFullYear() <= 2027) {
+    const key = toKey(d);
+    const turno = getTurnoGiorno(key);
+    if (turno && turno.t) {
+      const fine = new Date(d);
+      fine.setDate(fine.getDate() + 1);
+      const isUs = turno.t === 'Della Stazione';
+      const item = document.createElement('div');
+      item.className = 'next-item';
+      const fineStr = String(fine.getDate()).padStart(2,'0')+'/'+String(fine.getMonth()+1).padStart(2,'0')+' '+(turno.fineOra||'8:30');
+      let badges = `<span class="next-fine">${fineStr}</span>`;
+      if (turno.c) badges = `<span class="next-cont">+${turno.c}</span>` + badges;
+      if (turno.modificato) badges = `<span class="next-mod">✎</span>` + badges;
+      if (turno.straord) badges = `<span class="next-mod">★</span>` + badges;
+      item.innerHTML = `
+        <span class="next-day">${G[d.getDay()]} ${d.getDate()}/${String(d.getMonth()+1).padStart(2,'0')}</span>
+        <span class="next-name${isUs?' is-us':''}">Farm. ${turno.t}</span>
+        <span class="next-badges">${badges}</span>`;
+      list.appendChild(item);
+      count++;
+    }
+    d.setDate(d.getDate() + 1);
+  }
+}
+
+function renderAll() { renderToday(); renderNext(); }
+
+function scheduleReload() {
+  const now = new Date();
+  const next2 = new Date(now);
+  next2.setHours(2, 0, 0, 0);
+  if (next2 <= now) next2.setDate(next2.getDate() + 1);
+  setTimeout(() => location.reload(), next2 - now);
+}
+
+updateClock();
+loadOverrides();
+setInterval(updateClock, 30000);
+setInterval(loadOverrides, 5 * 60 * 1000); // rilegge Gist ogni 5 min
+scheduleReload();
+</script>
+</body>
+</html>
