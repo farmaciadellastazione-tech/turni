@@ -1,31 +1,48 @@
 #!/usr/bin/env node
-// Genera il calendario turni di un anno a partire dal testo del PDF ufficiale
+// Genera il calendario turni di un anno a partire dal PDF ufficiale
 // "CALENDARIO TURNI SP ANNO <anno>" dell'Ordine Provinciale Farmacisti di La Spezia.
 //
 // Uso:
-//   node tools/genera-turni.mjs <sorgente.txt> <anno> [--validate <index.html>]
+//   node tools/genera-turni.mjs <sorgente.pdf|.txt> <anno> [--validate <turni-AAAA.json>]
 //
-// - <sorgente.txt> : testo estratto dal PDF annuale (vedi data/sorgente-turni-AAAA.txt)
+// - <sorgente>     : il PDF annuale (consigliato) oppure il testo già estratto (.txt)
 // - <anno>         : anno da estrarre (es. 2026)
-// - --validate F   : confronta l'output con la costante TURNI_BASE contenuta nel file F
-//                    (tipicamente index.html) e segnala le differenze, senza scrivere.
+// - --validate F   : confronta l'output con un JSON di riferimento (es. data/turni-2026.json)
+//                    e segnala le differenze, senza scrivere.
+//
+// Per leggere i PDF serve la dipendenza locale pdf-parse:
+//   cd tools && npm install
 //
 // Senza --validate, scrive data/turni-<anno>.json (mappa data -> {t, c?}),
-// nella stessa forma di TURNI_BASE, pronta per essere caricata dalle pagine.
+// nella stessa forma usata dalle pagine (index.html / edit-turni.html).
 
 import { readFileSync, writeFileSync, mkdirSync } from 'fs';
-import vm from 'vm';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 
 const [, , srcPath, annoArg, ...rest] = process.argv;
 if (!srcPath || !annoArg) {
-  console.error('Uso: node tools/genera-turni.mjs <sorgente.txt> <anno> [--validate <index.html>]');
+  console.error('Uso: node tools/genera-turni.mjs <sorgente.pdf|.txt> <anno> [--validate <turni-AAAA.json>]');
   process.exit(1);
 }
 const ANNO = parseInt(annoArg, 10);
 const validateIdx = rest.indexOf('--validate');
 const validateFile = validateIdx !== -1 ? rest[validateIdx + 1] : null;
 
-// Nomi canonici (identici a quelli usati in TURNI_BASE) + alias per refusi/OCR del PDF.
+// Legge la sorgente: estrae il testo dal PDF, oppure legge direttamente un .txt.
+async function readSource(path) {
+  if (/\.pdf$/i.test(path)) {
+    let PDFParse;
+    try { ({ PDFParse } = require('pdf-parse')); }
+    catch { console.error('Manca pdf-parse: esegui "cd tools && npm install".'); process.exit(1); }
+    const parser = new PDFParse({ data: readFileSync(path) });
+    const r = await parser.getText();
+    return r.text || '';
+  }
+  return readFileSync(path, 'utf8');
+}
+
+// Nomi canonici (identici a quelli usati dalle pagine) + alias per refusi/OCR del PDF.
 const CANON = {
   'CROCE ROSSA': 'Croce Rossa', 'CROCE BIANCA': 'Croce Bianca', 'CROCE VERDE': 'Croce Verde',
   'DI MAROLA/MAIMONE': 'Di Marola/Maimone', 'ALLEANZA': 'Alleanza', 'BERETTA': 'Beretta',
@@ -46,7 +63,7 @@ const MESI = ['GENNAIO', 'FEBBRAIO', 'MARZO', 'APRILE', 'MAGGIO', 'GIUGNO', 'LUG
   'SETTEMBRE', 'OTTOBRE', 'NOVEMBRE', 'DICEMBRE'];
 const WD_RE = new RegExp('(' + [...WD].join('|') + ')\\d+$');
 
-const txt = readFileSync(srcPath, 'utf8').replace(/’/g, "'");
+const txt = (await readSource(srcPath)).replace(/\r\n?/g, '\n').replace(/’/g, "'");
 
 // Corpo testuale di un mese: dall'intestazione del mese fino al mese successivo
 // (per dicembre, fino a "GENNAIO <anno+1>" o fine file).
@@ -111,27 +128,23 @@ if (problemi.length) {
   problemi.forEach(p => console.log('  ' + p));
 }
 
-// --- Validazione opzionale contro TURNI_BASE ---
+// --- Validazione opzionale contro un JSON di riferimento ---
 if (validateFile) {
-  const src = readFileSync(validateFile, 'utf8');
-  const objText = src.match(/const TURNI_BASE = (\{[\s\S]*?\n\});/)[1];
-  const ctx = {};
-  vm.createContext(ctx);
-  const BASE = vm.runInContext('(' + objText + ')', ctx);
-  const allKeys = [...new Set([...Object.keys(BASE), ...chiavi])].sort();
+  const REF = JSON.parse(readFileSync(validateFile, 'utf8'));
+  const allKeys = [...new Set([...Object.keys(REF), ...chiavi])].sort();
   let ok = 0;
   const diffs = [];
   for (const kk of allKeys) {
-    const b = BASE[kk], p = parsed[kk];
-    if (!b) { diffs.push(`+ ${kk}: parser=${JSON.stringify(p)} (manca in TURNI_BASE)`); continue; }
-    if (!p) { diffs.push(`- ${kk}: TURNI_BASE=${JSON.stringify(b)} (manca nel parser)`); continue; }
+    const b = REF[kk], p = parsed[kk];
+    if (!b) { diffs.push(`+ ${kk}: parser=${JSON.stringify(p)} (manca nel riferimento)`); continue; }
+    if (!p) { diffs.push(`- ${kk}: riferimento=${JSON.stringify(b)} (manca nel parser)`); continue; }
     if (b.t !== p.t || (b.c || null) !== (p.c || null)) {
-      diffs.push(`~ ${kk}: TURNI_BASE=${JSON.stringify(b)}  parser=${JSON.stringify(p)}`);
+      diffs.push(`~ ${kk}: riferimento=${JSON.stringify(b)}  parser=${JSON.stringify(p)}`);
     } else ok++;
   }
   console.log(`\nValidazione: ${ok} coincidenti, ${diffs.length} differenze.`);
   if (diffs.length) { diffs.forEach(d => console.log('  ' + d)); process.exit(1); }
-  console.log('✓ Output identico a TURNI_BASE.');
+  console.log('✓ Output identico al riferimento.');
   process.exit(0);
 }
 
