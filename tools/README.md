@@ -1,24 +1,35 @@
 # tools/ — generatore calendario turni
 
-Strumento per costruire il calendario turni di un anno a partire dal **PDF ufficiale**
+Strumento per costruire il calendario turni di un anno direttamente dal **PDF ufficiale**
 dell'Ordine Provinciale Farmacisti di La Spezia ("CALENDARIO TURNI SP ANNO _anno_").
+
+## Preparazione (una volta sola)
+
+Per leggere i PDF serve installare la dipendenza locale:
+
+```bash
+cd tools
+npm install
+```
+
+(crea `tools/node_modules/`, che non viene versionato.)
 
 ## Aggiornamento annuale (la procedura)
 
-1. **Ottieni il PDF** del nuovo anno e **estrai il testo** in un file di testo
-   (copia-incolla dal PDF, o "salva come testo"). Salvalo come
-   `data/sorgente-turni-<anno>.txt`.
-2. **Genera** il calendario:
+1. **Salva il PDF** del nuovo anno, ad esempio in `data/calendario-turni-2027.pdf`.
+2. **Genera** il calendario passando direttamente il PDF:
    ```bash
-   node tools/genera-turni.mjs data/sorgente-turni-2027.txt 2027
+   node tools/genera-turni.mjs data/calendario-turni-2027.pdf 2027
    ```
-   Crea `data/turni-2027.json` (mappa `data → {t, c?}`, stessa forma di `TURNI_BASE`).
-3. (Consigliato) **Valida** il primo anno contro i dati già noti, per verificare che
-   il parser interpreti bene il formato del PDF:
+   Crea `data/turni-2027.json` (mappa `data → {t, c?}`), che le pagine caricano da sole.
+3. (Consigliato) **Valida** rigenerando un anno già noto e confrontandolo, per verificare
+   che il parser interpreti bene il PDF:
    ```bash
-   node tools/genera-turni.mjs data/sorgente-turni-2026.txt 2026 --validate index.html
+   node tools/genera-turni.mjs data/calendario-turni-2026.pdf 2026 --validate data/turni-2026.json
    ```
-   Deve stampare `✓ Output identico a TURNI_BASE.`
+   Deve stampare `✓ Output identico al riferimento.`
+
+In alternativa al PDF si può passare un file di testo già estratto (`.txt`): l'uso è identico.
 
 ## Note
 
@@ -32,6 +43,7 @@ dell'Ordine Provinciale Farmacisti di La Spezia ("CALENDARIO TURNI SP ANNO _anno
 
 ## File
 
-- `genera-turni.mjs` — il generatore/validatore
-- `../data/sorgente-turni-2026.txt` — testo del PDF 2026 (sorgente)
+- `genera-turni.mjs` — il generatore/validatore (legge PDF o testo)
+- `package.json` / `package-lock.json` — dipendenza `pdf-parse`
+- `../data/sorgente-turni-2026.txt` — testo del PDF 2026 (sorgente storica)
 - `../data/turni-2026.json` — calendario 2026 generato e validato

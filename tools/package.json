@@ -1,0 +1,10 @@
+{
+  "name": "turni-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Strumenti locali per generare il calendario turni dal PDF ufficiale",
+  "type": "module",
+  "dependencies": {
+    "pdf-parse": "^2.4.5"
+  }
+}
