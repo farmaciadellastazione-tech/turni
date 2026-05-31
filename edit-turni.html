@@ -79,6 +79,9 @@
   <button style="background:#1565c0;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;"
     onclick="document.getElementById('pdfAnno').click()">📅 Importa calendario annuale (PDF)</button>
   <input type="file" id="pdfAnno" accept="application/pdf" style="display:none" onchange="importaCalendario(this.files[0])">
+  <button style="background:#6a1b9a;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
+    onclick="document.getElementById('pdfBollettino').click()">📋 Importa bollettino settimanale (PDF)</button>
+  <input type="file" id="pdfBollettino" accept="application/pdf" style="display:none" onchange="importaBollettino(this.files[0])">
 </div>
 
 <div class="status-bar" id="statusBar">Caricamento...</div>
@@ -275,6 +278,53 @@ async function importaCalendario(file) {
     setStatus('⚠ Errore import: ' + e.message, true);
   } finally {
     const inp = document.getElementById('pdfAnno');
+    if (inp) inp.value = '';
+  }
+}
+
+// Import del bollettino settimanale: PDF -> parser condiviso -> SOLO le differenze
+// rispetto alla base finiscono negli override. Non salva: stage in memoria, poi 💾 Salva.
+async function importaBollettino(file) {
+  if (!file) return;
+  setStatus('Lettura del bollettino...', false);
+  try {
+    const text = await estraiTestoPDF(file);
+    const { turni, problemi } = TurniParser.parseBulletin(text);
+    const giorni = Object.keys(turni).sort();
+    if (!giorni.length) {
+      setStatus('⚠ Nessun giorno riconosciuto nel bollettino. Controlla di aver scelto il file giusto.', true);
+      return;
+    }
+    const etich = r => r && r.t ? r.t + (r.c ? ' + ' + r.c : '') : '(nessuna)';
+    // Tiene solo i giorni in cui il bollettino differisce dalla base.
+    const diffs = giorni.filter(k => {
+      const b = TURNI_BASE[k] || {}, n = turni[k];
+      return (b.t || '') !== (n.t || '') || (b.c || '') !== (n.c || '');
+    });
+    if (problemi.length) console.warn('Bollettino — blocchi non riconosciuti:', problemi);
+    const range = giorni[0] + ' → ' + giorni[giorni.length - 1];
+    const coda = problemi.length ? `\n⚠ ${problemi.length} blocchi non riconosciuti (vedi console).` : '';
+    if (!diffs.length) {
+      setStatus(`✓ Bollettino ${range}: ${giorni.length} giorni, tutti già coerenti con la base. Nessuna modifica.${coda}`, false);
+      return;
+    }
+    const elenco = diffs.map(k => `• ${k}: ${etich(TURNI_BASE[k])}  →  ${etich(turni[k])}`).join('\n');
+    if (!confirm(`Bollettino ${range}: ${giorni.length} giorni letti, ${diffs.length} diversi dalla base.${coda}\n\nDifferenze:\n${elenco}\n\nApplicare queste modifiche agli override? (poi premi 💾 Salva per pubblicare)`)) {
+      setStatus('Import bollettino annullato.', false);
+      return;
+    }
+    diffs.forEach(k => {
+      const next = Object.assign({}, overrides[k], { t: turni[k].t }); // preserva fineOra/straord/nota
+      if (turni[k].c) next.c = turni[k].c; else delete next.c;
+      overrides[k] = next;
+    });
+    dirty = true;
+    renderCal();
+    setStatus(`✓ Applicate ${diffs.length} modifiche dal bollettino (${range}). Premi 💾 Salva per pubblicare.`, false);
+  } catch (e) {
+    setStatus('⚠ Errore import bollettino: ' + e.message, true);
+  } finally {
+    const inp = document.getElementById('pdfBollettino');
     if (inp) inp.value = '';
   }
 }
