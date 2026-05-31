@@ -24,6 +24,11 @@
   .turno-label { font-size: 10px; color: #888; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
   .turno-name { font-size: 28px; font-weight: 800; color: #1a1a1a; line-height: 1.1; }
   .turno-name.is-us { color: #2e7d4f; }
+  .turno-contact { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
+  .contact-row { font-size: 15px; color: #333; }
+  .contact-row .c-name { font-weight: 700; color: #1a1a1a; }
+  .contact-row .c-addr { color: #444; }
+  .contact-row .c-tel { color: #1565c0; text-decoration: none; font-weight: 700; }
   .turno-meta { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
   .badge-fine { background: #fff3cd; color: #856404; border: 1px solid #ffc107; border-radius: 4px; font-size: 11px; font-weight: 700; padding: 2px 8px; }
   .badge-contorno { background: #e8f5e9; color: #2e7d4f; border: 1px solid #a5d6a7; border-radius: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; }
@@ -88,6 +93,7 @@
       <div class="turno-main">
         <div class="turno-label">Adesso</div>
         <div class="turno-name" id="todayName">—</div>
+        <div class="turno-contact" id="todayContact"></div>
         <div class="turno-meta" id="todayMeta"></div>
       </div>
       <div class="section-bar">Prossimi turni · Upcoming</div>
@@ -137,6 +143,7 @@ const GIST_ID = '8f699fa0fd4566b2bbb2805b76ad482e';
 const GIST_FILE = 'turni-overrides.json';
 
 let TURNI_BASE = {};
+let FARMACIE = {};
 
 let overrides = {};
 
@@ -146,6 +153,18 @@ async function loadBase() {
     fetch(`data/turni-${y}.json`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
   ));
   TURNI_BASE = Object.assign({}, ...parts);
+}
+
+async function loadFarmacie() {
+  try { FARMACIE = await fetch('data/farmacie.json').then(r => r.ok ? r.json() : {}); }
+  catch { FARMACIE = {}; }
+}
+
+// Un turno può indicare più farmacie fisiche (es. "Di Marola/Maimone"): le separa
+// e abbina a ciascuna indirizzo/telefono da farmacie.json.
+function infoFarmacie(nome) {
+  if (!nome) return [];
+  return nome.split('/').map(s => s.trim()).map(n => Object.assign({ nome: n }, FARMACIE[n]));
 }
 
 async function loadOverrides() {
@@ -226,10 +245,28 @@ function updateClock() {
     String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear()+' '+t;
 }
 
+function renderContact(nome) {
+  const el = document.getElementById('todayContact');
+  el.innerHTML = '';
+  const infos = infoFarmacie(nome);
+  const piu = infos.length > 1;
+  infos.forEach(f => {
+    if (!f.indirizzo && !f.telefono) return; // farmacia senza scheda: niente riga
+    const row = document.createElement('div');
+    row.className = 'contact-row';
+    const label = piu ? `<span class="c-name">${f.nome}</span> — ` : '';
+    const addr = f.indirizzo ? `<span class="c-addr">📍 ${f.indirizzo}${f.zona ? ' (' + f.zona + ')' : ''}</span>` : '';
+    const tel = f.telefono ? `<a class="c-tel" href="tel:${f.telefono.replace(/\s/g, '')}">📞 ${f.telefono}</a>` : '';
+    row.innerHTML = label + addr + (addr && tel ? ' · ' : '') + tel;
+    el.appendChild(row);
+  });
+}
+
 function renderToday() {
   const { turno, fine } = getTurnoAttivo();
   const meta = document.getElementById('todayMeta');
   meta.innerHTML = '';
+  document.getElementById('todayContact').innerHTML = '';
   if (!turno || !turno.t) {
     document.getElementById('todayName').textContent = 'Nessun dato';
     return;
@@ -238,6 +275,7 @@ function renderToday() {
   const nameEl = document.getElementById('todayName');
   nameEl.textContent = 'Farm. ' + turno.t;
   nameEl.className = 'turno-name' + (isUs ? ' is-us' : '');
+  renderContact(turno.t);
 
   const addBadge = (cls, txt) => {
     const s = document.createElement('span');
@@ -296,7 +334,7 @@ function scheduleReload() {
 
 async function init() {
   updateClock();
-  await loadBase();
+  await Promise.all([loadBase(), loadFarmacie()]);
   await loadOverrides();
 }
 init();
