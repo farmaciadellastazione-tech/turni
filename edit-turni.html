@@ -30,6 +30,8 @@
   .cal-cell.today { border-color: #2e7d4f; border-width: 2px; }
   .cal-cell.modified { border-color: #e65100; }
   .cal-cell.us { background: #e8f5e9; }
+  .cal-cell.us-cont { background: #e3f2fd; }
+  .cal-cont-us { font-size: 8px; color: #1565c0; font-weight: 700; margin-top: auto; }
   .cal-num { font-size: 11px; font-weight: 700; color: #555; }
   .cal-cell.today .cal-num { color: #2e7d4f; }
   .cal-farm { font-size: 9px; color: #333; margin-top: 2px; line-height: 1.2; }
@@ -406,7 +408,9 @@ function renderCal() {
     const base = TURNI_BASE[key];
     const ov = overrides[key];
     const nome = ov && ov.t !== undefined ? ov.t : (base ? base.t : null);
+    const cont = ov && ov.c !== undefined ? ov.c : (base ? (base.c || null) : null);
     const isUs = nome === 'Della Stazione';
+    const isUsCont = !isUs && cont === 'Della Stazione';
     const isModified = !!ov;
     const isToday = key === todayKey;
     const cell = document.createElement('div');
@@ -414,6 +418,7 @@ function renderCal() {
     if (isToday) cls += ' today';
     if (isModified) cls += ' modified';
     if (isUs) cls += ' us';
+    else if (isUsCont) cls += ' us-cont';
     cell.className = cls;
     cell.onclick = () => openModal(key, date);
     cell.innerHTML = `<div class="cal-num">${d}</div>`;
@@ -423,6 +428,11 @@ function renderCal() {
       const short = nome.length > 9 ? nome.substring(0,9)+'…' : nome;
       farm.textContent = short;
       cell.appendChild(farm);
+    }
+    if (isUsCont) {
+      const c = document.createElement('div');
+      c.className = 'cal-cont-us'; c.textContent = '＋ noi (conturno)';
+      cell.appendChild(c);
     }
     if (ov && ov.straord) {
       const s = document.createElement('div');
