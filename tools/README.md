@@ -47,10 +47,13 @@ In alternativa al PDF si può passare un file di testo già estratto (`.txt`): l
 
 Oltre al calendario annuale, `../turni-parser.js` espone `parseBulletin()` per i
 **bollettini settimanali** discorsivi dell'Ordine (*"… Diurno e notturno"*), usati
-dall'import 📋 dell'editor. Il test gira su bollettini reali salvati come fixture:
+dall'import 📋 dell'editor.
+
+I test (vitest) stanno in `../tests/turni-parser.test.js` e girano dalla root del repo:
 
 ```bash
-node tools/test-bollettino.mjs
+npm install   # una volta
+npm test      # parser annuale + bollettini contro fixture reali
 ```
 
 Le fixture sono in `../data/esempio-bollettino-*.txt` (testo estratto da PDF 2022 e 2026).
@@ -58,7 +61,7 @@ Le fixture sono in `../data/esempio-bollettino-*.txt` (testo estratto da PDF 202
 ## File
 
 - `genera-turni.mjs` — il generatore/validatore del calendario annuale (legge PDF o testo)
-- `test-bollettino.mjs` — test del parser dei bollettini settimanali
+- `../tests/turni-parser.test.js` — test vitest del parser (annuale + bollettini)
 - `package.json` / `package-lock.json` — dipendenza `pdf-parse`
 - `../turni-parser.js` — parser condiviso (`parseAnnualText`, `parseBulletin`, `CANON`)
 - `../data/sorgente-turni-2026.txt` — testo del PDF 2026 (sorgente storica)
