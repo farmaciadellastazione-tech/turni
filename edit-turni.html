@@ -237,7 +237,16 @@ async function estraiTestoPDF(file) {
   for (let p = 1; p <= pdf.numPages; p++) {
     const page = await pdf.getPage(p);
     const c = await page.getTextContent();
-    text += c.items.map(i => i.str).join(' ') + ' ';
+    // Assembla come pdf-parse: concatena gli str e va a capo sugli hasEOL, SENZA
+    // spazi tra gli item. Mettere uno spazio tra ogni frammento spezzava parole e
+    // numeri: l'anno "2026" diventava "20 2 6" e la tabella annuale era illeggibile
+    // ("Anno non trovato" / mesi non trovati).
+    for (const it of c.items) {
+      if (!('str' in it)) continue;
+      text += it.str;
+      if (it.hasEOL) text += '\n';
+    }
+    text += '\n';
   }
   return text;
 }
