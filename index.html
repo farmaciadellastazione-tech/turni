@@ -24,6 +24,9 @@
   .turno-label { font-size: 10px; color: #888; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
   .turno-name { font-size: 28px; font-weight: 800; color: #1a1a1a; line-height: 1.1; }
   .turno-name.is-us { color: #2e7d4f; }
+  .conturno-block { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cfe0d4; }
+  .conturno-name { font-size: 20px; font-weight: 700; color: #1a1a1a; line-height: 1.1; }
+  .conturno-name.is-us { color: #2e7d4f; }
   .turno-contact { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
   .contact-row { font-size: 15px; color: #333; }
   .contact-row .c-name { font-weight: 700; color: #1a1a1a; }
@@ -96,6 +99,11 @@
         <div class="turno-name" id="todayName">—</div>
         <div class="turno-contact" id="todayContact"></div>
         <div class="turno-meta" id="todayMeta"></div>
+        <div class="conturno-block" id="conturnoBlock" style="display:none">
+          <div class="turno-label">Conturno · supporto orario minimo</div>
+          <div class="conturno-name" id="conturnoName">—</div>
+          <div class="turno-contact" id="conturnoContact"></div>
+        </div>
       </div>
       <div class="section-bar">Prossimi turni · Upcoming</div>
       <div class="prossimi"><div class="next-list" id="nextList"></div></div>
@@ -255,8 +263,7 @@ function updateClock() {
     String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear()+' '+t;
 }
 
-function renderContact(nome) {
-  const el = document.getElementById('todayContact');
+function renderContactInto(el, nome) {
   el.innerHTML = '';
   const infos = infoFarmacie(nome);
   const piu = infos.length > 1;
@@ -281,6 +288,8 @@ function renderToday() {
   const meta = document.getElementById('todayMeta');
   meta.innerHTML = '';
   document.getElementById('todayContact').innerHTML = '';
+  const conturnoBlock = document.getElementById('conturnoBlock');
+  conturnoBlock.style.display = 'none';
   if (!turno || !turno.t) {
     document.getElementById('todayName').textContent = 'Nessun dato';
     return;
@@ -289,14 +298,23 @@ function renderToday() {
   const nameEl = document.getElementById('todayName');
   nameEl.textContent = 'Farm. ' + turno.t;
   nameEl.className = 'turno-name' + (isUs ? ' is-us' : '');
-  renderContact(turno.t);
+  renderContactInto(document.getElementById('todayContact'), turno.t);
+
+  // Conturno (farmacia di supporto a orario minimo, in genere nei festivi):
+  // mostrato in evidenza con nome + indirizzo + telefono, come il turno.
+  if (turno.c) {
+    const cn = document.getElementById('conturnoName');
+    cn.textContent = 'Farm. ' + turno.c;
+    cn.className = 'conturno-name' + (turno.c === 'Della Stazione' ? ' is-us' : '');
+    renderContactInto(document.getElementById('conturnoContact'), turno.c);
+    conturnoBlock.style.display = '';
+  }
 
   const addBadge = (cls, txt) => {
     const s = document.createElement('span');
     s.className = cls; s.textContent = txt; meta.appendChild(s);
   };
   addBadge('badge-fine', fmtFine(fine, turno.fineOra));
-  if (turno.c) addBadge('badge-contorno', 'Contorno: Farm. ' + turno.c);
   if (turno.straord) addBadge('badge-straord', '★ ' + turno.straord);
   if (turno.nota) addBadge('badge-nota', '📌 ' + turno.nota);
   if (turno.modificato) addBadge('badge-nota', '✎ modificato');

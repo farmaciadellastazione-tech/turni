@@ -13,13 +13,13 @@ Il progetto è composto da **due pagine HTML statiche**, senza backend:
 | File | A cosa serve |
 |------|--------------|
 | `index.html` | **Bacheca pubblica** (sola lettura). Mostra la farmacia di turno adesso, i prossimi turni, orologio, mappa, servizi e contatti. Si aggiorna da sola. |
-| `edit-turni.html` | **Editor** (mobile-friendly). Calendario per modificare giorno per giorno il turno, il contorno, l'orario di fine, aperture straordinarie e note. |
+| `edit-turni.html` | **Editor** (mobile-friendly). Calendario per modificare giorno per giorno il turno, il conturno, l'orario di fine, aperture straordinarie e note. |
 
 I dati vivono in tre posti:
 
 - **Calendario base dell'anno** → file versionati `data/turni-<anno>.json` (un turno per ogni giorno), generati dal PDF ufficiale dell'Ordine (vedi `tools/`). Le pagine caricano da sole gli anni *precedente / corrente / successivo*.
 - **Anagrafica farmacie** → `data/farmacie.json`: indirizzo e telefono di ogni farmacia.
-- **Modifiche/eccezioni** → un **GitHub Gist** pubblico con due file: `turni-overrides.json` (solo le differenze rispetto alla base: cambi farmacia, contorno, fine turno, straordinari, note) e `turni-base.json` (base aggiornata da remoto, se presente sostituisce i file versionati).
+- **Modifiche/eccezioni** → un **GitHub Gist** pubblico con due file: `turni-overrides.json` (solo le differenze rispetto alla base: cambi farmacia, conturno, fine turno, straordinari, note) e `turni-base.json` (base aggiornata da remoto, se presente sostituisce i file versionati).
 
 ```
 data/turni-<anno>.json (base)  +  overrides (dal Gist)  =  turno mostrato
