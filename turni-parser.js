@@ -17,7 +17,10 @@
     'DI MAROLA/MAIMONE': 'Di Marola/Maimone', 'ALLEANZA': 'Alleanza', 'BERETTA': 'Beretta',
     'ARGENTIERI': 'Argentieri', 'INTERNAZIONALE': 'Internazionale', 'BONASCHI': 'Bonaschi',
     "DELL'ARSENALE": "Dell'Arsenale", "DELL'AQUILA": "Dell'Aquila", 'DI PRIMA': 'Di Prima',
-    'CAMPODONICO': 'Campodonico', 'S.TA BARBARA': 'S.ta Barbara', 'SCHIAFFINO': 'Schiaffino',
+    // La farmacia di Pegazzano è stata rinominata "Del Fico" (ex "Campodonico"):
+    // entrambe le grafie (PDF annuale storico e bollettini) puntano al nome nuovo.
+    'CAMPODONICO': 'Del Fico', 'DEL FICO': 'Del Fico',
+    'S.TA BARBARA': 'S.ta Barbara', 'SCHIAFFINO': 'Schiaffino',
     'TARANTOLA': 'Tarantola', 'FELIA PRIONE': 'Felia Prione', 'DELLA MARINA': 'Della Marina',
     'DELLA STAZIONE': 'Della Stazione', 'BERGERO': 'Bergero', 'MIGLIARINA': 'Migliarina',
     'MAGLIO': 'Maglio', 'BARACCHINI': 'Baracchini', 'FARMACEUTICA': 'Farmaceutica',

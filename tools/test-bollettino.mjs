@@ -53,6 +53,20 @@ const CASI = [
     },
   },
   {
+    // Settimana in cui "Del Fico" (ex Campodonico, Pegazzano) è di turno.
+    file: 'esempio-bollettino-2026-05b.txt',
+    atteso: {
+      '2026-05-22': { t: 'Beretta' },
+      '2026-05-23': { t: 'Croce Rossa' },
+      '2026-05-24': { t: 'S.ta Barbara', c: 'Croce Verde' },
+      '2026-05-25': { t: 'Di Prima' },
+      '2026-05-26': { t: "Dell'Arsenale" },
+      '2026-05-27': { t: 'Del Fico' },
+      '2026-05-28': { t: 'Centrale' },
+      '2026-05-29': { t: 'Farina' },
+    },
+  },
+  {
     file: 'esempio-bollettino-2026-06.txt',
     atteso: {
       '2026-06-05': { t: 'Felia Prione' },
