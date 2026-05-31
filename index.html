@@ -29,6 +29,7 @@
   .contact-row .c-name { font-weight: 700; color: #1a1a1a; }
   .contact-row .c-addr { color: #444; }
   .contact-row .c-tel { color: #1a1a1a; font-weight: 700; }
+  .contact-row a.c-tel { color: #1565c0; text-decoration: underline; }
   .turno-meta { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
   .badge-fine { background: #fff3cd; color: #856404; border: 1px solid #ffc107; border-radius: 4px; font-size: 11px; font-weight: 700; padding: 2px 8px; }
   .badge-contorno { background: #e8f5e9; color: #2e7d4f; border: 1px solid #a5d6a7; border-radius: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; }
@@ -167,6 +168,15 @@ function infoFarmacie(nome) {
   return nome.split('/').map(s => s.trim()).map(n => Object.assign({ nome: n }, FARMACIE[n]));
 }
 
+// La stessa pagina gira sul kiosk Windows (dove tel: aprirebbe un popup inutile)
+// e sui cellulari di chi apre il sito (dove la chiamata è utile): il numero è
+// link tel: solo su mobile, altrimenti testo in chiaro.
+function isMobile() {
+  const uad = navigator.userAgentData;
+  if (uad && typeof uad.mobile === 'boolean') return uad.mobile;
+  return /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(navigator.userAgent || '');
+}
+
 async function loadOverrides() {
   try {
     const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
@@ -256,9 +266,11 @@ function renderContact(nome) {
     row.className = 'contact-row';
     const label = piu ? `<span class="c-name">${f.nome}</span> — ` : '';
     const addr = f.indirizzo ? `<span class="c-addr">📍 ${f.indirizzo}${f.zona ? ' (' + f.zona + ')' : ''}</span>` : '';
-    // Numero in chiaro NON cliccabile: la bacheca gira su mini-PC Windows senza
-    // telefonia, dove un link tel: aprirebbe solo un popup di sistema "apri con…".
-    const tel = f.telefono ? `<span class="c-tel">📞 ${f.telefono}</span>` : '';
+    // Su cellulare: link tel: che avvia la chiamata. Sul kiosk Windows: testo in
+    // chiaro (un tel: lì aprirebbe solo un popup di sistema "apri con…").
+    const tel = !f.telefono ? ''
+      : isMobile() ? `<a class="c-tel" href="tel:${f.telefono.replace(/\s/g, '')}">📞 ${f.telefono}</a>`
+      : `<span class="c-tel">📞 ${f.telefono}</span>`;
     row.innerHTML = label + addr + (addr && tel ? ' · ' : '') + tel;
     el.appendChild(row);
   });
