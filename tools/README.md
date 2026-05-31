@@ -34,16 +34,33 @@ In alternativa al PDF si può passare un file di testo già estratto (`.txt`): l
 ## Note
 
 - I nomi delle farmacie vengono **normalizzati** sui nomi canonici (vedi `CANON`
-  in `genera-turni.mjs`). Il PDF ufficiale contiene a volte refusi/errori OCR
-  (es. `ALLENAZA`, `ARGENITERI`): se ne incontri di nuovi, aggiungi un alias in `CANON`.
+  in `../turni-parser.js`, il parser condiviso usato anche dall'editor). Il PDF ufficiale
+  contiene a volte refusi/errori OCR (es. `ALLENAZA`, `ARGENITERI`): se ne incontri di
+  nuovi, aggiungi un alias in `CANON`. Lì sono gestiti anche i **rinominamenti** (es.
+  Pegazzano: `CAMPODONICO` e `DEL FICO` puntano entrambi a `Del Fico`).
 - Il campo `c` (conturno) è la farmacia di supporto a orario minimo nei **festivi**;
   viene letto dalla colonna CONTURNO del PDF.
 - Se il parser non riconosce un nome, si ferma e segnala il giorno problematico
   invece di scrivere dati sbagliati.
 
+## Bollettini settimanali
+
+Oltre al calendario annuale, `../turni-parser.js` espone `parseBulletin()` per i
+**bollettini settimanali** discorsivi dell'Ordine (*"… Diurno e notturno"*), usati
+dall'import 📋 dell'editor. Il test gira su bollettini reali salvati come fixture:
+
+```bash
+node tools/test-bollettino.mjs
+```
+
+Le fixture sono in `../data/esempio-bollettino-*.txt` (testo estratto da PDF 2022 e 2026).
+
 ## File
 
-- `genera-turni.mjs` — il generatore/validatore (legge PDF o testo)
+- `genera-turni.mjs` — il generatore/validatore del calendario annuale (legge PDF o testo)
+- `test-bollettino.mjs` — test del parser dei bollettini settimanali
 - `package.json` / `package-lock.json` — dipendenza `pdf-parse`
+- `../turni-parser.js` — parser condiviso (`parseAnnualText`, `parseBulletin`, `CANON`)
 - `../data/sorgente-turni-2026.txt` — testo del PDF 2026 (sorgente storica)
 - `../data/turni-2026.json` — calendario 2026 generato e validato
+- `../data/farmacie.json` — anagrafica (indirizzo + telefono) di ogni farmacia
