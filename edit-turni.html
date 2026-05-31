@@ -30,6 +30,8 @@
   .cal-cell.today { border-color: #2e7d4f; border-width: 2px; }
   .cal-cell.modified { border-color: #e65100; }
   .cal-cell.us { background: #e8f5e9; }
+  .cal-cell.us-cont { background: #e3f2fd; }
+  .cal-cont-us { font-size: 8px; color: #1565c0; font-weight: 700; margin-top: auto; }
   .cal-num { font-size: 11px; font-weight: 700; color: #555; }
   .cal-cell.today .cal-num { color: #2e7d4f; }
   .cal-farm { font-size: 9px; color: #333; margin-top: 2px; line-height: 1.2; }
@@ -59,6 +61,8 @@
 </style>
 <script src="turni-parser.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 </head>
 <body>
 
@@ -82,6 +86,8 @@
   <button style="background:#6a1b9a;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
     onclick="document.getElementById('pdfBollettino').click()">📋 Importa bollettino settimanale (PDF)</button>
   <input type="file" id="pdfBollettino" accept="application/pdf" style="display:none" onchange="importaBollettino(this.files[0])">
+  <button style="background:#00695c;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
+    onclick="apriPosizioni()">📍 Posizioni farmacie</button>
 </div>
 
 <div class="status-bar" id="statusBar">Caricamento...</div>
@@ -140,9 +146,29 @@
   </div>
 </div>
 
+<!-- PANNELLO POSIZIONI FARMACIE (mappa) -->
+<div id="posOverlay" style="display:none;position:fixed;inset:0;z-index:300;background:#fff;flex-direction:column;">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">📍 Posizioni farmacie</div>
+      <div class="topbar-sub" id="posCount">—</div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="save-btn" id="posSaveBtn" onclick="salvaPosizioni()">💾 Salva</button>
+      <button class="save-btn" style="background:#e0e0e0;color:#333;" onclick="chiudiPosizioni()">✕ Chiudi</button>
+    </div>
+  </div>
+  <div style="padding:8px 12px;background:#eef4ff;border-bottom:1px solid #d6e2f5;">
+    <select id="posFarm" onchange="selPosFarm()" style="width:100%;padding:9px;border:1px solid #ccc;border-radius:6px;font-size:15px;"></select>
+  </div>
+  <div id="posHint" style="padding:7px 12px;font-size:12px;color:#555;background:#f7faf8;border-bottom:1px solid #e0e8e2;">Scegli una farmacia, poi tocca la mappa per fissarne il punto. Trascina il pin per correggere.</div>
+  <div id="posMap" style="flex:1;min-height:0;"></div>
+</div>
+
 <script>
 const GIST_ID = '8f699fa0fd4566b2bbb2805b76ad482e';
 const GIST_FILE = 'turni-overrides.json';
+const POS_FILE = 'farmacie-pos.json';
 const TOKEN_KEY = 'edit_turni_token';
 
 const FARMACIE = [
@@ -163,6 +189,11 @@ let viewMonth, viewYear, editKey;
 let dirty = false;
 let modalSnapshot = null;
 
+// Anagrafica (data/farmacie.json) e posizioni geografiche (Gist farmacie-pos.json)
+let FARMACIE_ANAG = {};       // nome -> { indirizzo, telefono, zona? }
+let POSIZIONI = {};           // nome -> [lat, lng]
+let posMap = null, posMarker = null, posSel = '', posDirty = false;
+
 function toKey(d) {
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
@@ -175,6 +206,11 @@ async function loadBase() {
     fetch(`data/turni-${y}.json`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
   ));
   TURNI_BASE = Object.assign({}, ...parts);
+}
+
+async function loadFarmacie() {
+  try { FARMACIE_ANAG = await fetch('data/farmacie.json').then(r => r.ok ? r.json() : {}); }
+  catch { FARMACIE_ANAG = {}; }
 }
 
 async function loadFromGist() {
@@ -192,6 +228,8 @@ async function loadFromGist() {
       if (b && Object.keys(b).length) TURNI_BASE = b;
     }
     overrides = JSON.parse(data.files[GIST_FILE].content).overrides || {};
+    const pf = data.files[POS_FILE];
+    POSIZIONI = (pf && pf.content) ? (JSON.parse(pf.content) || {}) : {};
     const n = Object.keys(overrides).length;
     setStatus(`✓ Caricato — ${n} modific${n===1?'a':'he'} salvat${n===1?'a':'e'}`, false);
   } catch(e) {
@@ -370,7 +408,9 @@ function renderCal() {
     const base = TURNI_BASE[key];
     const ov = overrides[key];
     const nome = ov && ov.t !== undefined ? ov.t : (base ? base.t : null);
+    const cont = ov && ov.c !== undefined ? ov.c : (base ? (base.c || null) : null);
     const isUs = nome === 'Della Stazione';
+    const isUsCont = !isUs && cont === 'Della Stazione';
     const isModified = !!ov;
     const isToday = key === todayKey;
     const cell = document.createElement('div');
@@ -378,6 +418,7 @@ function renderCal() {
     if (isToday) cls += ' today';
     if (isModified) cls += ' modified';
     if (isUs) cls += ' us';
+    else if (isUsCont) cls += ' us-cont';
     cell.className = cls;
     cell.onclick = () => openModal(key, date);
     cell.innerHTML = `<div class="cal-num">${d}</div>`;
@@ -387,6 +428,11 @@ function renderCal() {
       const short = nome.length > 9 ? nome.substring(0,9)+'…' : nome;
       farm.textContent = short;
       cell.appendChild(farm);
+    }
+    if (isUsCont) {
+      const c = document.createElement('div');
+      c.className = 'cal-cont-us'; c.textContent = '＋ noi (conturno)';
+      cell.appendChild(c);
     }
     if (ov && ov.straord) {
       const s = document.createElement('div');
@@ -504,8 +550,104 @@ function resetDay() {
 
 // Avvisa se si chiude/ricarica con modifiche non salvate
 window.addEventListener('beforeunload', (e) => {
-  if (dirty || modalHasChanges()) { e.preventDefault(); e.returnValue = ''; }
+  if (dirty || posDirty || modalHasChanges()) { e.preventDefault(); e.returnValue = ''; }
 });
+
+// --- Posizioni farmacie sulla mappa (salvate sul Gist: farmacie-pos.json) ---
+function apriPosizioni() {
+  if (typeof L === 'undefined') { alert('Mappa non caricata (serve connessione internet). Riprova.'); return; }
+  popolaPosFarm();
+  aggiornaPosCount();
+  document.getElementById('posOverlay').style.display = 'flex';
+  initPosMap();
+  setTimeout(() => { if (posMap) posMap.invalidateSize(); selPosFarm(); }, 200);
+}
+function chiudiPosizioni() {
+  if (posDirty && !confirm('Hai posizioni non salvate. Chiudere senza salvare?')) return;
+  document.getElementById('posOverlay').style.display = 'none';
+}
+function initPosMap() {
+  if (posMap || typeof L === 'undefined') return;
+  // Fix icone marker di default con percorsi del CDN
+  delete L.Icon.Default.prototype._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  });
+  posMap = L.map('posMap').setView([44.107, 9.828], 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(posMap);
+  posMap.on('click', (e) => setPunto(e.latlng.lat, e.latlng.lng));
+}
+function popolaPosFarm() {
+  const sel = document.getElementById('posFarm');
+  const cur = sel.value;
+  sel.innerHTML = '';
+  Object.keys(FARMACIE_ANAG).sort((a, b) => a.localeCompare(b, 'it')).forEach(n => {
+    const o = document.createElement('option');
+    o.value = n;
+    o.textContent = (POSIZIONI[n] ? '✓ ' : '○ ') + n;
+    sel.appendChild(o);
+  });
+  if (cur && FARMACIE_ANAG[cur]) sel.value = cur;
+}
+function selPosFarm() {
+  posSel = document.getElementById('posFarm').value;
+  const a = FARMACIE_ANAG[posSel] || {};
+  const ind = a.indirizzo ? a.indirizzo + (a.zona ? ' (' + a.zona + ')' : '') : '';
+  if (POSIZIONI[posSel]) {
+    const [lat, lng] = POSIZIONI[posSel];
+    mettiMarker(lat, lng);
+    if (posMap) posMap.setView([lat, lng], 17);
+    document.getElementById('posHint').textContent = `${posSel} — ${ind} · pin posizionato (trascina o tocca per spostare).`;
+  } else {
+    if (posMarker && posMap) { posMap.removeLayer(posMarker); posMarker = null; }
+    document.getElementById('posHint').textContent = `${posSel} — ${ind} · nessun punto: tocca la mappa dove si trova.`;
+  }
+}
+function mettiMarker(lat, lng) {
+  if (!posMap) return;
+  if (posMarker) posMap.removeLayer(posMarker);
+  posMarker = L.marker([lat, lng], { draggable: true }).addTo(posMap);
+  posMarker.on('dragend', () => {
+    const p = posMarker.getLatLng();
+    POSIZIONI[posSel] = [+p.lat.toFixed(6), +p.lng.toFixed(6)];
+    posDirty = true; aggiornaPosCount();
+  });
+}
+function setPunto(lat, lng) {
+  if (!posSel) { alert('Scegli prima una farmacia dal menù in alto.'); return; }
+  POSIZIONI[posSel] = [+lat.toFixed(6), +lng.toFixed(6)];
+  posDirty = true;
+  mettiMarker(lat, lng);
+  popolaPosFarm();
+  document.getElementById('posFarm').value = posSel;
+  aggiornaPosCount();
+}
+function aggiornaPosCount() {
+  const tot = Object.keys(FARMACIE_ANAG).length;
+  const fatte = Object.keys(FARMACIE_ANAG).filter(n => POSIZIONI[n]).length;
+  document.getElementById('posCount').textContent = `${fatte}/${tot} posizionate${posDirty ? ' · NON salvate' : ''}`;
+}
+async function salvaPosizioni() {
+  const token = getToken();
+  if (!token) { alert('Inserisci prima il GitHub Token (campo in alto nell\'editor).'); return; }
+  const btn = document.getElementById('posSaveBtn');
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { [POS_FILE]: { content: JSON.stringify(POSIZIONI, null, 2) } } })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    posDirty = false; aggiornaPosCount();
+    alert('✓ Posizioni salvate sul Gist. La bacheca le userà entro 5 minuti.');
+  } catch (e) {
+    alert('⚠ Errore salvataggio: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '💾 Salva';
+}
 
 // Init
 const now = new Date();
@@ -514,7 +656,7 @@ viewYear = now.getFullYear();
 const saved = getToken();
 if (saved) document.getElementById('tokenInput').value = saved;
 (async () => {
-  await loadBase();
+  await Promise.all([loadBase(), loadFarmacie()]);
   await loadFromGist();
 })();
 </script>

@@ -66,6 +66,8 @@
   .sync-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #4caf50; margin-right: 5px; vertical-align: middle; }
   .sync-dot.err { background: #f44336; }
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 </head>
 <body>
 <div class="page">
@@ -100,7 +102,7 @@
         <div class="turno-contact" id="todayContact"></div>
         <div class="turno-meta" id="todayMeta"></div>
         <div class="conturno-block" id="conturnoBlock" style="display:none">
-          <div class="turno-label">Conturno · supporto orario minimo</div>
+          <div class="turno-label" id="conturnoLabel">Conturno</div>
           <div class="conturno-name" id="conturnoName">—</div>
           <div class="turno-contact" id="conturnoContact"></div>
         </div>
@@ -124,9 +126,7 @@
     </div>
     <div class="right">
       <div class="map-area">
-        <iframe class="map-iframe"
-          src="https://www.openstreetmap.org/export/embed.html?bbox=9.780,44.080,9.870,44.120&layer=mapnik&marker=44.1014,9.8233"
-          allowfullscreen></iframe>
+        <div id="map" style="width:100%;height:100%;"></div>
       </div>
       <div class="servizi-box">
         <div class="servizi-title">• Servizi •</div>
@@ -153,6 +153,8 @@ const GIST_FILE = 'turni-overrides.json';
 
 let TURNI_BASE = {};
 let FARMACIE = {};
+let POSIZIONI = {};            // nome -> [lat, lng], dal Gist farmacie-pos.json
+let mappa = null, layerMarker = null;
 
 let overrides = {};
 
@@ -201,6 +203,8 @@ async function loadOverrides() {
     }
     const content = data.files[GIST_FILE].content;
     overrides = JSON.parse(content).overrides || {};
+    const pf = data.files['farmacie-pos.json'];
+    POSIZIONI = (pf && pf.content) ? (JSON.parse(pf.content) || {}) : {};
     document.getElementById('syncDot').className = 'sync-dot';
     document.getElementById('syncText').textContent = 'Aggiornato ' + new Date().toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'});
   } catch(e) {
@@ -283,8 +287,21 @@ function renderContactInto(el, nome) {
   });
 }
 
+// Il conturno (farmacia di supporto a orario minimo) è aperto solo di giorno:
+// dalle 08:30 alle 19:30 (alle 20:00 a luglio/agosto) del giorno del turno.
+// `key` = 'YYYY-MM-DD' di quel giorno.
+function statoConturno(key) {
+  const [Y, M, D] = key.split('-').map(Number);
+  const estate = (M === 7 || M === 8);
+  const apertura = new Date(Y, M - 1, D, 8, 30, 0, 0);
+  const chiusura = new Date(Y, M - 1, D, estate ? 20 : 19, estate ? 0 : 30, 0, 0);
+  const now = new Date();
+  const fine = estate ? '20:00' : '19:30';
+  return { aperto: now >= apertura && now <= chiusura, orario: '08:30–' + fine };
+}
+
 function renderToday() {
-  const { turno, fine } = getTurnoAttivo();
+  const { turno, fine, key } = getTurnoAttivo();
   const meta = document.getElementById('todayMeta');
   meta.innerHTML = '';
   document.getElementById('todayContact').innerHTML = '';
@@ -300,14 +317,19 @@ function renderToday() {
   nameEl.className = 'turno-name' + (isUs ? ' is-us' : '');
   renderContactInto(document.getElementById('todayContact'), turno.t);
 
-  // Conturno (farmacia di supporto a orario minimo, in genere nei festivi):
-  // mostrato in evidenza con nome + indirizzo + telefono, come il turno.
+  // Conturno (supporto a orario minimo, in genere nei festivi): in evidenza con
+  // nome + indirizzo + telefono + orario. Mostrato SOLO mentre è aperto:
+  // dopo le 19:30 (20:00 a luglio/agosto) resta solo la farmacia di turno 24h.
   if (turno.c) {
-    const cn = document.getElementById('conturnoName');
-    cn.textContent = 'Farm. ' + turno.c;
-    cn.className = 'conturno-name' + (turno.c === 'Della Stazione' ? ' is-us' : '');
-    renderContactInto(document.getElementById('conturnoContact'), turno.c);
-    conturnoBlock.style.display = '';
+    const sc = statoConturno(key);
+    if (sc.aperto) {
+      document.getElementById('conturnoLabel').textContent = 'Conturno · aperto ' + sc.orario;
+      const cn = document.getElementById('conturnoName');
+      cn.textContent = 'Farm. ' + turno.c;
+      cn.className = 'conturno-name' + (turno.c === 'Della Stazione' ? ' is-us' : '');
+      renderContactInto(document.getElementById('conturnoContact'), turno.c);
+      conturnoBlock.style.display = '';
+    }
   }
 
   const addBadge = (cls, txt) => {
@@ -354,7 +376,45 @@ function renderNext() {
   }
 }
 
-function renderAll() { renderToday(); renderNext(); }
+// Mappa Leaflet con i marker delle farmacie aperte (turno + conturno se aperto)
+// e della nostra. Le coordinate vengono dal Gist (farmacie-pos.json), impostate
+// dall'editor. Chi non ha ancora un punto non compare; se Leaflet non si carica
+// (offline), la funzione esce senza errori.
+function initMappa() {
+  if (mappa || typeof L === 'undefined' || !document.getElementById('map')) return;
+  mappa = L.map('map', { attributionControl: true }).setView([44.107, 9.83], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mappa);
+  layerMarker = L.layerGroup().addTo(mappa);
+}
+function renderMappa() {
+  if (typeof L === 'undefined') return;
+  initMappa();
+  if (!mappa) return;
+  mappa.invalidateSize();
+  layerMarker.clearLayers();
+  const pts = [];
+  const aggiungi = (nome, colore, etich, raggio) => {
+    nome.split('/').map(s => s.trim()).forEach(n => {
+      const p = POSIZIONI[n];
+      if (!p) return;
+      L.circleMarker(p, { radius: raggio, color: '#fff', weight: 2, fillColor: colore, fillOpacity: 1 })
+        .bindTooltip(etich + ': ' + n, { permanent: true, direction: 'top' })
+        .addTo(layerMarker);
+      pts.push(p);
+    });
+  };
+  const { turno, key } = getTurnoAttivo();
+  if (turno && turno.t) aggiungi(turno.t, '#2e7d4f', 'Turno', 11);
+  if (turno && turno.c && statoConturno(key).aperto) aggiungi(turno.c, '#1565c0', 'Conturno', 10);
+  const noi = POSIZIONI['Della Stazione'] || [44.1014, 9.8233];
+  L.circleMarker(noi, { radius: 7, color: '#fff', weight: 2, fillColor: '#888', fillOpacity: 1 })
+    .bindTooltip('Noi', { direction: 'top' }).addTo(layerMarker);
+  pts.push(noi);
+  if (pts.length === 1) mappa.setView(pts[0], 15);
+  else mappa.fitBounds(L.latLngBounds(pts).pad(0.35));
+}
+
+function renderAll() { renderToday(); renderNext(); renderMappa(); }
 
 function scheduleReload() {
   const now = new Date();
@@ -370,7 +430,7 @@ async function init() {
   await loadOverrides();
 }
 init();
-setInterval(updateClock, 30000);
+setInterval(() => { updateClock(); renderToday(); renderMappa(); }, 30000); // aggiorna turno/conturno/mappa (es. chiusura conturno alle 19:30)
 setInterval(loadOverrides, 5 * 60 * 1000); // rilegge Gist ogni 5 min
 scheduleReload();
 </script>
