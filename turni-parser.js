@@ -152,7 +152,7 @@
         const r = matchNameEnding(bl.slice(0, mm.index));
         if (r) mains.push(r.name);
       }
-      // contorno: nome prima di "Dalle ... orario minimo"
+      // conturno: nome prima di "Dalle ... orario minimo"
       let cont = null;
       const om = bl.toLowerCase().indexOf('orario minimo');
       if (om !== -1) {

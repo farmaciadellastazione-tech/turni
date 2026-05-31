@@ -15,7 +15,7 @@ Italian-language static web app for **Farmacia della Stazione** (La Spezia): a d
 ## Files
 
 - `index.html` — **bacheca pubblica** (read-only). Shows the pharmacy on duty now, upcoming turni, clock, map, services, contacts. Auto-refreshes. Reads data over HTTP, so it must be served (not opened as `file://`).
-- `edit-turni.html` — **editor** (mobile-friendly). Day-by-day calendar to edit turno, contorno, end time, extraordinary openings, notes. Writes to a GitHub Gist via the GitHub API (needs a PAT with `gist` scope, pasted into the field, kept in `localStorage`). Also imports PDFs (see below).
+- `edit-turni.html` — **editor** (mobile-friendly). Day-by-day calendar to edit turno, conturno (the `c` field), end time, extraordinary openings, notes. Writes to a GitHub Gist via the GitHub API (needs a PAT with `gist` scope, pasted into the field, kept in `localStorage`). Also imports PDFs (see below).
 - `turni-parser.js` — **shared parser** (UMD: `require` in Node, `<script src>` in the browser). Exposes `parseAnnualText(text, anno)`, `parseBulletin(text)`, and `CANON`. Used by both the editor and the CLI generator.
 - `data/turni-<anno>.json` — calendar base, one record per day (`{t, c?}`), generated from the official PDF. The pages load *previous / current / next* year.
 - `data/farmacie.json` — anagrafica: `{ indirizzo, telefono, zona? }` per pharmacy, keyed by the display name used in the turni data.
