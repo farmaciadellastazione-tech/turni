@@ -37,6 +37,34 @@ const CASI = [
       '2022-05-27': { t: 'Degli Speziali' },
     },
   },
+  {
+    // Formato 2026 (estratto reale dal PDF dell'Ordine): nuova farmacia "Del Fico"
+    // in intestazione, "DI MAROLA" al posto di "Bastiani", "Felia Prione (Bedini)".
+    file: 'esempio-bollettino-2026-05.txt',
+    atteso: {
+      '2026-05-29': { t: 'Farina' },
+      '2026-05-30': { t: 'Argentieri' },
+      '2026-05-31': { t: 'Migliarina', c: 'Croce Verde' },
+      '2026-06-01': { t: 'Di Marola/Maimone' },
+      '2026-06-02': { t: 'Del Porto', c: 'Della Stazione' },
+      '2026-06-03': { t: 'Schiaffino' },
+      '2026-06-04': { t: 'Bergero' },
+      '2026-06-05': { t: 'Felia Prione' },
+    },
+  },
+  {
+    file: 'esempio-bollettino-2026-06.txt',
+    atteso: {
+      '2026-06-05': { t: 'Felia Prione' },
+      '2026-06-06': { t: "Dell'Aquila" },
+      '2026-06-07': { t: 'Baracchini', c: 'Alleanza' },
+      '2026-06-08': { t: 'Croce Rossa' },
+      '2026-06-09': { t: 'Bonaschi' },
+      '2026-06-10': { t: 'Beretta' },
+      '2026-06-11': { t: 'Croce Bianca' },
+      '2026-06-12': { t: 'Degli Speziali' },
+    },
+  },
 ];
 
 let ok = 0, ko = 0;
