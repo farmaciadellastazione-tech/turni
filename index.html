@@ -128,14 +128,9 @@
       <div class="map-area">
         <div id="map" style="width:100%;height:100%;"></div>
       </div>
-      <div class="servizi-box">
+      <div class="servizi-box" id="serviziBox">
         <div class="servizi-title">• Servizi •</div>
-        <div class="servizi-grid">
-          <div class="servizio-item">Holter ECG</div>
-          <div class="servizio-item">Holter Pressorio</div>
-          <div class="servizio-item">Elettrocardiogramma</div>
-          <div class="servizio-item">Misurazione PA</div>
-        </div>
+        <div class="servizi-grid" id="serviziGrid"></div>
       </div>
     </div>
   </div>
@@ -157,6 +152,8 @@ let POSIZIONI = {};            // nome -> [lat, lng], dal Gist farmacie-pos.json
 let mappa = null, layerMarker = null;
 
 let overrides = {};
+let CONTENUTI = {};            // contenuti editabili dal Gist (contenuti.json): { servizi, annunci }
+const SERVIZI_DEFAULT = ['Holter ECG','Holter Pressorio','Elettrocardiogramma','Misurazione PA'];
 
 async function loadBase() {
   const yr = new Date().getFullYear();
@@ -205,6 +202,8 @@ async function loadOverrides() {
     overrides = JSON.parse(content).overrides || {};
     const pf = data.files['farmacie-pos.json'];
     POSIZIONI = (pf && pf.content) ? (JSON.parse(pf.content) || {}) : {};
+    const cf = data.files['contenuti.json'];
+    CONTENUTI = (cf && cf.content) ? (JSON.parse(cf.content) || {}) : {};
     document.getElementById('syncDot').className = 'sync-dot';
     document.getElementById('syncText').textContent = 'Aggiornato ' + new Date().toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'});
   } catch(e) {
@@ -414,7 +413,24 @@ function renderMappa() {
   else mappa.fitBounds(L.latLngBounds(pts).pad(0.35));
 }
 
-function renderAll() { renderToday(); renderNext(); renderMappa(); }
+// Servizi: lista editabile dal Gist (contenuti.json -> servizi[]). Se assente usa
+// l'elenco di default; se esplicitamente vuota nasconde l'intero box.
+function renderServizi() {
+  const box = document.getElementById('serviziBox');
+  const grid = document.getElementById('serviziGrid');
+  const lista = Array.isArray(CONTENUTI.servizi) ? CONTENUTI.servizi : SERVIZI_DEFAULT;
+  const voci = lista.map(s => (s || '').trim()).filter(Boolean);
+  box.style.display = voci.length ? '' : 'none';
+  grid.innerHTML = '';
+  voci.forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'servizio-item';
+    d.textContent = s;
+    grid.appendChild(d);
+  });
+}
+
+function renderAll() { renderToday(); renderNext(); renderMappa(); renderServizi(); }
 
 function scheduleReload() {
   const now = new Date();

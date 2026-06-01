@@ -88,6 +88,8 @@
   <input type="file" id="pdfBollettino" accept="application/pdf" style="display:none" onchange="importaBollettino(this.files[0])">
   <button style="background:#00695c;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
     onclick="apriPosizioni()">📍 Posizioni farmacie</button>
+  <button style="background:#00838f;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
+    onclick="apriServizi()">🩺 Servizi</button>
 </div>
 
 <div class="status-bar" id="statusBar">Caricamento...</div>
@@ -165,10 +167,29 @@
   <div id="posMap" style="flex:1;min-height:0;"></div>
 </div>
 
+<!-- PANNELLO SERVIZI (lista mostrata nella bacheca) -->
+<div id="serviziOverlay" style="display:none;position:fixed;inset:0;z-index:300;background:#fff;flex-direction:column;">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">🩺 Servizi</div>
+      <div class="topbar-sub" id="serviziCount">—</div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="save-btn" id="serviziSaveBtn" onclick="salvaServizi()">💾 Salva</button>
+      <button class="save-btn" style="background:#e0e0e0;color:#333;" onclick="chiudiServizi()">✕ Chiudi</button>
+    </div>
+  </div>
+  <div style="padding:9px 12px;font-size:12px;color:#555;background:#f7faf8;border-bottom:1px solid #e0e8e2;">Un servizio per riga. L'ordine è quello mostrato in bacheca. Lascia vuoto per nascondere il riquadro Servizi.</div>
+  <textarea id="serviziText" oninput="serviziDirty=true;aggiornaServiziCount()"
+    style="flex:1;min-height:0;border:none;outline:none;padding:12px;font-size:16px;line-height:1.8;resize:none;font-family:inherit;"
+    placeholder="Holter ECG&#10;Holter Pressorio&#10;Elettrocardiogramma&#10;Misurazione PA"></textarea>
+</div>
+
 <script>
 const GIST_ID = '8f699fa0fd4566b2bbb2805b76ad482e';
 const GIST_FILE = 'turni-overrides.json';
 const POS_FILE = 'farmacie-pos.json';
+const CONTENUTI_FILE = 'contenuti.json';
 const TOKEN_KEY = 'edit_turni_token';
 
 const FARMACIE = [
@@ -193,6 +214,10 @@ let modalSnapshot = null;
 let FARMACIE_ANAG = {};       // nome -> { indirizzo, telefono, zona? }
 let POSIZIONI = {};           // nome -> [lat, lng]
 let posMap = null, posMarker = null, posSel = '', posDirty = false;
+
+// Contenuti editabili della bacheca (Gist contenuti.json): { servizi, annunci }
+let CONTENUTI = {};
+let serviziDirty = false;
 
 function toKey(d) {
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -230,6 +255,8 @@ async function loadFromGist() {
     overrides = JSON.parse(data.files[GIST_FILE].content).overrides || {};
     const pf = data.files[POS_FILE];
     POSIZIONI = (pf && pf.content) ? (JSON.parse(pf.content) || {}) : {};
+    const cf = data.files[CONTENUTI_FILE];
+    CONTENUTI = (cf && cf.content) ? (JSON.parse(cf.content) || {}) : {};
     const n = Object.keys(overrides).length;
     setStatus(`✓ Caricato — ${n} modific${n===1?'a':'he'} salvat${n===1?'a':'e'}`, false);
   } catch(e) {
@@ -550,7 +577,7 @@ function resetDay() {
 
 // Avvisa se si chiude/ricarica con modifiche non salvate
 window.addEventListener('beforeunload', (e) => {
-  if (dirty || posDirty || modalHasChanges()) { e.preventDefault(); e.returnValue = ''; }
+  if (dirty || posDirty || serviziDirty || modalHasChanges()) { e.preventDefault(); e.returnValue = ''; }
 });
 
 // --- Posizioni farmacie sulla mappa (salvate sul Gist: farmacie-pos.json) ---
@@ -643,6 +670,50 @@ async function salvaPosizioni() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     posDirty = false; aggiornaPosCount();
     alert('✓ Posizioni salvate sul Gist. La bacheca le userà entro 5 minuti.');
+  } catch (e) {
+    alert('⚠ Errore salvataggio: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '💾 Salva';
+}
+
+// --- Servizi (lista mostrata in bacheca, salvata sul Gist: contenuti.json) ---
+const SERVIZI_DEFAULT = ['Holter ECG','Holter Pressorio','Elettrocardiogramma','Misurazione PA'];
+
+function apriServizi() {
+  const lista = Array.isArray(CONTENUTI.servizi) ? CONTENUTI.servizi : SERVIZI_DEFAULT;
+  document.getElementById('serviziText').value = lista.join('\n');
+  serviziDirty = false;
+  aggiornaServiziCount();
+  document.getElementById('serviziOverlay').style.display = 'flex';
+}
+function chiudiServizi() {
+  if (serviziDirty && !confirm('Hai servizi non salvati. Chiudere senza salvare?')) return;
+  document.getElementById('serviziOverlay').style.display = 'none';
+}
+function serviziDaTextarea() {
+  return document.getElementById('serviziText').value
+    .split('\n').map(s => s.trim()).filter(Boolean);
+}
+function aggiornaServiziCount() {
+  const n = serviziDaTextarea().length;
+  document.getElementById('serviziCount').textContent =
+    `${n} servizi${n === 1 ? 'o' : ''}${serviziDirty ? ' · NON salvati' : ''}`;
+}
+async function salvaServizi() {
+  const token = getToken();
+  if (!token) { alert('Inserisci prima il GitHub Token (campo in alto nell\'editor).'); return; }
+  const btn = document.getElementById('serviziSaveBtn');
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    CONTENUTI.servizi = serviziDaTextarea();   // preserva eventuali altre chiavi (annunci)
+    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { [CONTENUTI_FILE]: { content: JSON.stringify(CONTENUTI, null, 2) } } })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    serviziDirty = false; aggiornaServiziCount();
+    alert('✓ Servizi salvati sul Gist. La bacheca li userà entro 5 minuti.');
   } catch (e) {
     alert('⚠ Errore salvataggio: ' + e.message);
   }
