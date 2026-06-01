@@ -88,6 +88,12 @@
   <input type="file" id="pdfBollettino" accept="application/pdf" style="display:none" onchange="importaBollettino(this.files[0])">
   <button style="background:#00695c;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
     onclick="apriPosizioni()">📍 Posizioni farmacie</button>
+  <button style="background:#00838f;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
+    onclick="apriServizi()">🩺 Servizi</button>
+  <button style="background:#ef6c00;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
+    onclick="apriAnnunci()">📢 Annunci</button>
+  <button id="anagBtn" style="background:#455a64;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
+    onclick="pubblicaAnagrafica()" title="Copia data/farmacie.json sul Gist come rete di sicurezza">🗂 Pubblica anagrafica</button>
 </div>
 
 <div class="status-bar" id="statusBar">Caricamento...</div>
@@ -165,10 +171,51 @@
   <div id="posMap" style="flex:1;min-height:0;"></div>
 </div>
 
+<!-- PANNELLO SERVIZI (lista mostrata nella bacheca) -->
+<div id="serviziOverlay" style="display:none;position:fixed;inset:0;z-index:300;background:#fff;flex-direction:column;">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">🩺 Servizi</div>
+      <div class="topbar-sub" id="serviziCount">—</div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="save-btn" id="serviziSaveBtn" onclick="salvaServizi()">💾 Salva</button>
+      <button class="save-btn" style="background:#e0e0e0;color:#333;" onclick="chiudiServizi()">✕ Chiudi</button>
+    </div>
+  </div>
+  <div style="padding:9px 12px;font-size:12px;color:#555;background:#f7faf8;border-bottom:1px solid #e0e8e2;">Un servizio per riga. L'ordine è quello mostrato in bacheca. Lascia vuoto per nascondere il riquadro Servizi.</div>
+  <textarea id="serviziText" oninput="serviziDirty=true;aggiornaServiziCount()"
+    style="flex:1;min-height:0;border:none;outline:none;padding:12px;font-size:16px;line-height:1.8;resize:none;font-family:inherit;"
+    placeholder="Holter ECG&#10;Holter Pressorio&#10;Elettrocardiogramma&#10;Misurazione PA"></textarea>
+</div>
+
+<!-- PANNELLO ANNUNCI (comunicazioni mostrate in bacheca) -->
+<div id="annunciOverlay" style="display:none;position:fixed;inset:0;z-index:300;background:#fff;flex-direction:column;">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">📢 Annunci</div>
+      <div class="topbar-sub" id="annunciCount">—</div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="save-btn" id="annunciSaveBtn" onclick="salvaAnnunci()">💾 Salva</button>
+      <button class="save-btn" style="background:#e0e0e0;color:#333;" onclick="chiudiAnnunci()">✕ Chiudi</button>
+    </div>
+  </div>
+  <div style="padding:9px 12px;font-size:12px;color:#555;background:#f7faf8;border-bottom:1px solid #e0e8e2;">
+    Comunicazioni e offerte (solo italiano). Le date sono opzionali: lascia vuoto "Dal/Al" per mostrarlo sempre. "📢 In evidenza" lo mette nel banner grande in cima alla bacheca; gli altri vanno nel riquadro Comunicazioni a destra. Fuori dall'intervallo di date sparisce da solo.
+  </div>
+  <div id="annunciEditor" style="flex:1;min-height:0;overflow:auto;padding:10px 12px;background:#f5f7f5;"></div>
+  <div style="padding:10px 12px;border-top:1px solid #e0e8e2;">
+    <button onclick="aggiungiAnnuncio()" style="background:#00838f;color:#fff;border:none;border-radius:6px;padding:10px 14px;font-size:14px;font-weight:700;cursor:pointer;width:100%;">+ Aggiungi annuncio</button>
+  </div>
+</div>
+
 <script>
 const GIST_ID = '8f699fa0fd4566b2bbb2805b76ad482e';
 const GIST_FILE = 'turni-overrides.json';
 const POS_FILE = 'farmacie-pos.json';
+const CONTENUTI_FILE = 'contenuti.json';
+const ANAG_FILE = 'farmacie.json';
 const TOKEN_KEY = 'edit_turni_token';
 
 const FARMACIE = [
@@ -193,6 +240,11 @@ let modalSnapshot = null;
 let FARMACIE_ANAG = {};       // nome -> { indirizzo, telefono, zona? }
 let POSIZIONI = {};           // nome -> [lat, lng]
 let posMap = null, posMarker = null, posSel = '', posDirty = false;
+
+// Contenuti editabili della bacheca (Gist contenuti.json): { servizi, annunci }
+let CONTENUTI = {};
+let serviziDirty = false;
+let annunciDirty = false;
 
 function toKey(d) {
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -230,6 +282,8 @@ async function loadFromGist() {
     overrides = JSON.parse(data.files[GIST_FILE].content).overrides || {};
     const pf = data.files[POS_FILE];
     POSIZIONI = (pf && pf.content) ? (JSON.parse(pf.content) || {}) : {};
+    const cf = data.files[CONTENUTI_FILE];
+    CONTENUTI = (cf && cf.content) ? (JSON.parse(cf.content) || {}) : {};
     const n = Object.keys(overrides).length;
     setStatus(`✓ Caricato — ${n} modific${n===1?'a':'he'} salvat${n===1?'a':'e'}`, false);
   } catch(e) {
@@ -550,7 +604,7 @@ function resetDay() {
 
 // Avvisa se si chiude/ricarica con modifiche non salvate
 window.addEventListener('beforeunload', (e) => {
-  if (dirty || posDirty || modalHasChanges()) { e.preventDefault(); e.returnValue = ''; }
+  if (dirty || posDirty || serviziDirty || annunciDirty || modalHasChanges()) { e.preventDefault(); e.returnValue = ''; }
 });
 
 // --- Posizioni farmacie sulla mappa (salvate sul Gist: farmacie-pos.json) ---
@@ -643,6 +697,162 @@ async function salvaPosizioni() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     posDirty = false; aggiornaPosCount();
     alert('✓ Posizioni salvate sul Gist. La bacheca le userà entro 5 minuti.');
+  } catch (e) {
+    alert('⚠ Errore salvataggio: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '💾 Salva';
+}
+
+// --- Servizi (lista mostrata in bacheca, salvata sul Gist: contenuti.json) ---
+const SERVIZI_DEFAULT = ['Holter ECG','Holter Pressorio','Elettrocardiogramma','Misurazione PA'];
+
+function apriServizi() {
+  const lista = Array.isArray(CONTENUTI.servizi) ? CONTENUTI.servizi : SERVIZI_DEFAULT;
+  document.getElementById('serviziText').value = lista.join('\n');
+  serviziDirty = false;
+  aggiornaServiziCount();
+  document.getElementById('serviziOverlay').style.display = 'flex';
+}
+function chiudiServizi() {
+  if (serviziDirty && !confirm('Hai servizi non salvati. Chiudere senza salvare?')) return;
+  document.getElementById('serviziOverlay').style.display = 'none';
+}
+function serviziDaTextarea() {
+  return document.getElementById('serviziText').value
+    .split('\n').map(s => s.trim()).filter(Boolean);
+}
+function aggiornaServiziCount() {
+  const n = serviziDaTextarea().length;
+  document.getElementById('serviziCount').textContent =
+    `${n} servizi${n === 1 ? 'o' : ''}${serviziDirty ? ' · NON salvati' : ''}`;
+}
+async function salvaServizi() {
+  const token = getToken();
+  if (!token) { alert('Inserisci prima il GitHub Token (campo in alto nell\'editor).'); return; }
+  const btn = document.getElementById('serviziSaveBtn');
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    CONTENUTI.servizi = serviziDaTextarea();   // preserva eventuali altre chiavi (annunci)
+    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { [CONTENUTI_FILE]: { content: JSON.stringify(CONTENUTI, null, 2) } } })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    serviziDirty = false; aggiornaServiziCount();
+    alert('✓ Servizi salvati sul Gist. La bacheca li userà entro 5 minuti.');
+  } catch (e) {
+    alert('⚠ Errore salvataggio: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '💾 Salva';
+}
+
+// Pubblica l'anagrafica (data/farmacie.json) sul Gist come rete di sicurezza: la
+// bacheca la usa come fallback se il file locale non si carica. Il repo resta la
+// fonte di verità — ripubblicare quando si aggiorna data/farmacie.json.
+async function pubblicaAnagrafica() {
+  const token = getToken();
+  if (!token) { alert('Inserisci prima il GitHub Token (campo in alto nell\'editor).'); return; }
+  const n = Object.keys(FARMACIE_ANAG).length;
+  if (!n) { alert('Anagrafica non caricata (data/farmacie.json). Apri l\'editor servito via http, non come file.'); return; }
+  if (!confirm(`Pubblicare l'anagrafica (${n} farmacie) sul Gist come rete di sicurezza?`)) return;
+  const btn = document.getElementById('anagBtn');
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { [ANAG_FILE]: { content: JSON.stringify(FARMACIE_ANAG, null, 2) } } })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    alert(`✓ Anagrafica pubblicata sul Gist (${n} farmacie). La bacheca la userà come fallback.`);
+  } catch (e) {
+    alert('⚠ Errore: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '🗂 Pubblica anagrafica';
+}
+
+// --- Annunci (comunicazioni mostrate in bacheca, salvate sul Gist: contenuti.json) ---
+function apriAnnunci() {
+  const lista = Array.isArray(CONTENUTI.annunci) ? CONTENUTI.annunci : [];
+  const ed = document.getElementById('annunciEditor');
+  ed.innerHTML = '';
+  if (!lista.length) rigaAnnuncio({});
+  else lista.forEach(a => rigaAnnuncio(a));
+  annunciDirty = false;
+  aggiornaAnnunciCount();
+  document.getElementById('annunciOverlay').style.display = 'flex';
+}
+function chiudiAnnunci() {
+  if (annunciDirty && !confirm('Hai annunci non salvati. Chiudere senza salvare?')) return;
+  document.getElementById('annunciOverlay').style.display = 'none';
+}
+function rigaAnnuncio(a) {
+  a = a || {};
+  const row = document.createElement('div');
+  row.className = 'annuncio-row';
+  row.style.cssText = 'border:1px solid #d6e2f5;border-radius:8px;padding:10px;margin-bottom:10px;background:#fff;';
+  row.innerHTML =
+    '<textarea class="an-testo" rows="2" placeholder="Testo (es. Offerta solari -20% fino al 30/6)"' +
+      ' style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:15px;font-family:inherit;resize:vertical;"></textarea>' +
+    '<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">' +
+      '<label style="font-size:13px;color:#555;">Dal <input type="date" class="an-da" style="padding:6px;border:1px solid #ccc;border-radius:6px;font-size:14px;"></label>' +
+      '<label style="font-size:13px;color:#555;">Al <input type="date" class="an-a" style="padding:6px;border:1px solid #ccc;border-radius:6px;font-size:14px;"></label>' +
+      '<label style="font-size:13px;color:#555;display:flex;align-items:center;gap:4px;"><input type="checkbox" class="an-ev"> 📢 In evidenza</label>' +
+      '<button class="an-del" style="margin-left:auto;background:#fdecea;color:#c0392b;border:1px solid #f5c6cb;border-radius:6px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;">🗑 Rimuovi</button>' +
+    '</div>';
+  row.querySelector('.an-testo').value = a.testo || '';
+  row.querySelector('.an-da').value = a.da || '';
+  row.querySelector('.an-a').value = a.a || '';
+  row.querySelector('.an-ev').checked = !!a.evidenza;
+  row.querySelectorAll('input,textarea').forEach(el =>
+    el.addEventListener('input', () => { annunciDirty = true; aggiornaAnnunciCount(); }));
+  row.querySelector('.an-del').addEventListener('click', () => {
+    row.remove(); annunciDirty = true; aggiornaAnnunciCount();
+  });
+  document.getElementById('annunciEditor').appendChild(row);
+}
+function aggiungiAnnuncio() {
+  rigaAnnuncio({});
+  annunciDirty = true;
+  aggiornaAnnunciCount();
+}
+function annunciDaEditor() {
+  return [...document.querySelectorAll('#annunciEditor .annuncio-row')].map(r => {
+    const o = { testo: r.querySelector('.an-testo').value.trim() };
+    const da = r.querySelector('.an-da').value;
+    const a = r.querySelector('.an-a').value;
+    if (da) o.da = da;
+    if (a) o.a = a;
+    if (r.querySelector('.an-ev').checked) o.evidenza = true;
+    return o;
+  }).filter(o => o.testo);
+}
+function aggiornaAnnunciCount() {
+  const n = annunciDaEditor().length;
+  document.getElementById('annunciCount').textContent =
+    `${n} annunci${n === 1 ? 'o' : ''}${annunciDirty ? ' · NON salvati' : ''}`;
+}
+async function salvaAnnunci() {
+  const token = getToken();
+  if (!token) { alert('Inserisci prima il GitHub Token (campo in alto nell\'editor).'); return; }
+  // Controllo coerenza date (Dal <= Al)
+  for (const r of document.querySelectorAll('#annunciEditor .annuncio-row')) {
+    const da = r.querySelector('.an-da').value, a = r.querySelector('.an-a').value;
+    if (da && a && da > a) { alert('Un annuncio ha "Dal" successivo ad "Al". Correggi le date.'); return; }
+  }
+  const btn = document.getElementById('annunciSaveBtn');
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    CONTENUTI.annunci = annunciDaEditor();   // preserva eventuali altre chiavi (servizi)
+    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { [CONTENUTI_FILE]: { content: JSON.stringify(CONTENUTI, null, 2) } } })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    annunciDirty = false; aggiornaAnnunciCount();
+    alert('✓ Annunci salvati sul Gist. La bacheca li userà entro 5 minuti.');
   } catch (e) {
     alert('⚠ Errore salvataggio: ' + e.message);
   }

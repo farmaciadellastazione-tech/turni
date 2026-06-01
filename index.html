@@ -17,6 +17,20 @@
   .clock-time { font-size: 30px; font-weight: 700; color: #1a1a1a; line-height: 1; letter-spacing: 1px; }
   .clock-date { font-size: 11px; color: #666; margin-top: 2px; text-transform: capitalize; }
   .orari-tag { font-size: 11px; color: #2e7d4f; font-weight: 600; margin-top: 3px; }
+  .lang-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .lang-btn { width: 34px; height: 25px; padding: 0; border: 2px solid transparent; border-radius: 4px; background: none; cursor: pointer; overflow: hidden; line-height: 0; opacity: 0.5; transition: opacity .15s, border-color .15s; font-size: 11px; font-weight: 700; color: #555; }
+  .lang-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .lang-btn.active { border-color: #2e7d4f; opacity: 1; }
+  .lang-btn:hover { opacity: 1; }
+  /* Arabo (body.rtl): solo il testo delle etichette tradotte va in RTL e allineato a
+     destra; l'impaginazione (colonne, header, mappa) resta invariata. Nomi/indirizzi
+     farmacie, annunci (italiano) e servizi restano LTR. */
+  body.rtl .section-bar,
+  body.rtl .turno-label,
+  body.rtl .servizi-title,
+  body.rtl .annunci-box-title,
+  body.rtl #footerLegal,
+  body.rtl .qr-text { direction: rtl; text-align: right; }
   .body { display: grid; grid-template-columns: 1fr 340px; flex: 1; min-height: 0; }
   .left { display: flex; flex-direction: column; }
   .section-bar { background: #2e7d4f; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 6px 16px; flex-shrink: 0; }
@@ -62,12 +76,35 @@
   .servizi-title { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #7ec8a0; margin-bottom: 8px; }
   .servizi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
   .servizio-item { background: #2e7d4f; border-radius: 4px; padding: 5px 8px; font-size: 11px; font-weight: 700; text-align: center; color: #fff; }
+  /* Banner annunci: stessa estetica del banner di galenico (DM Mono, palette calda, centrato) */
+  .annunci-banner { background: #fde8d8; border-bottom: 3px solid #c46d2c; padding: 9px 18px; flex-shrink: 0; display: flex; flex-direction: column; gap: 5px; }
+  .annuncio-evidenza { font-family: 'DM Mono','Segoe UI',monospace; font-size: 16px; font-weight: 500; color: #7d3c0c; letter-spacing: 0.04em; text-align: center; }
+  .annuncio-evidenza::before { content: '📢 '; }
+  .annunci-box { background: #fbeed5; border-top: 1px solid #e8c840; padding: 10px 14px; flex-shrink: 0; }
+  .annunci-box-title { font-family: 'DM Mono',monospace; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #7a4a00; margin-bottom: 6px; }
+  .annuncio-item { font-family: 'DM Mono','Segoe UI',monospace; font-size: 12px; color: #5a3a00; padding: 3px 0; border-bottom: 1px solid #f0d090; }
+  .annuncio-item:last-child { border-bottom: none; }
+  .qr-box { background: #fff; border-top: 2px solid #2e7d4f; padding: 10px 12px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .qr-box .qr-img { width: 96px; height: 96px; flex-shrink: 0; }
+  .qr-box .qr-img svg { width: 100%; height: 100%; display: block; }
+  .qr-text .qr-title { font-weight: 800; font-size: 15px; color: #2e7d4f; line-height: 1.15; }
+  .qr-text .qr-sub { font-size: 12px; color: #555; margin-top: 3px; }
   .footer { background: #1a1a1a; color: #aaa; font-size: 10px; padding: 5px 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
   .sync-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #4caf50; margin-right: 5px; vertical-align: middle; }
   .sync-dot.err { background: #f44336; }
 </style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2e7d4f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Turni">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="qrcode.js"></script>
 </head>
 <body>
 <div class="page">
@@ -86,18 +123,32 @@
         </div>
       </div>
     </div>
+    <div class="lang-bar" id="langBar">
+      <button class="lang-btn active" data-lang="it" onclick="setLang('it')" title="Italiano"><img src="https://flagcdn.com/w40/it.png" alt="IT"></button>
+      <button class="lang-btn" data-lang="en" onclick="setLang('en')" title="English"><img src="https://flagcdn.com/w40/gb.png" alt="EN"></button>
+      <button class="lang-btn" data-lang="fr" onclick="setLang('fr')" title="Français"><img src="https://flagcdn.com/w40/fr.png" alt="FR"></button>
+      <button class="lang-btn" data-lang="es" onclick="setLang('es')" title="Español"><img src="https://flagcdn.com/w40/es.png" alt="ES"></button>
+      <button class="lang-btn" data-lang="de" onclick="setLang('de')" title="Deutsch"><img src="https://flagcdn.com/w40/de.png" alt="DE"></button>
+      <button class="lang-btn" data-lang="pt" onclick="setLang('pt')" title="Português"><img src="https://flagcdn.com/w40/pt.png" alt="PT"></button>
+      <button class="lang-btn" data-lang="zh" onclick="setLang('zh')" title="中文"><img src="https://flagcdn.com/w40/cn.png" alt="ZH"></button>
+      <button class="lang-btn" data-lang="ar" onclick="setLang('ar')" title="العربية"><img src="https://flagcdn.com/w40/sa.png" alt="AR"></button>
+      <button class="lang-btn" data-lang="ro" onclick="setLang('ro')" title="Română"><img src="https://flagcdn.com/w40/ro.png" alt="RO"></button>
+      <button class="lang-btn" data-lang="sq" onclick="setLang('sq')" title="Shqip"><img src="https://flagcdn.com/w40/al.png" alt="SQ"></button>
+    </div>
     <div class="header-right">
       <div class="clock-time" id="clockTime">--:--</div>
       <div class="clock-date" id="clockDate">—</div>
-      <div class="orari-tag">Lun–Sab: 08:30–19:30</div>
+      <div class="orari-tag" id="orariTag">Lun–Sab: 08:30–19:30</div>
     </div>
   </div>
 
+  <div class="annunci-banner" id="annunciBanner" style="display:none"></div>
+
   <div class="body">
     <div class="left">
-      <div class="section-bar">Farmacia di turno · Pharmacy on duty</div>
+      <div class="section-bar" id="barOnDuty">Farmacia di turno</div>
       <div class="turno-main">
-        <div class="turno-label">Adesso</div>
+        <div class="turno-label" id="todayLabel">Adesso</div>
         <div class="turno-name" id="todayName">—</div>
         <div class="turno-contact" id="todayContact"></div>
         <div class="turno-meta" id="todayMeta"></div>
@@ -107,7 +158,7 @@
           <div class="turno-contact" id="conturnoContact"></div>
         </div>
       </div>
-      <div class="section-bar">Prossimi turni · Upcoming</div>
+      <div class="section-bar" id="barUpcoming">Prossimi turni</div>
       <div class="prossimi"><div class="next-list" id="nextList"></div></div>
       <div class="social-bar">
         <a class="social-link" href="https://farmaciadellastazionespezia.it" target="_blank">
@@ -128,13 +179,19 @@
       <div class="map-area">
         <div id="map" style="width:100%;height:100%;"></div>
       </div>
-      <div class="servizi-box">
-        <div class="servizi-title">• Servizi •</div>
-        <div class="servizi-grid">
-          <div class="servizio-item">Holter ECG</div>
-          <div class="servizio-item">Holter Pressorio</div>
-          <div class="servizio-item">Elettrocardiogramma</div>
-          <div class="servizio-item">Misurazione PA</div>
+      <div class="servizi-box" id="serviziBox">
+        <div class="servizi-title" id="serviziTitle">• Servizi •</div>
+        <div class="servizi-grid" id="serviziGrid"></div>
+      </div>
+      <div class="annunci-box" id="annunciBox" style="display:none">
+        <div class="annunci-box-title" id="annunciTitle">• Comunicazioni •</div>
+        <div id="annunciList"></div>
+      </div>
+      <div class="qr-box" id="qrBox" style="display:none">
+        <div class="qr-img" id="qrImg"></div>
+        <div class="qr-text">
+          <div class="qr-title" id="qrTitle">Fatti la tessera fedeltà</div>
+          <div class="qr-sub" id="qrSub">Inquadra il QR · è gratis</div>
         </div>
       </div>
     </div>
@@ -142,7 +199,7 @@
 
   <div class="footer">
     <span id="syncStatus"><span class="sync-dot" id="syncDot"></span><span id="syncText">—</span></span>
-    <span>Il servizio a battenti chiusi è solo per medicinali urgenti · Diritto fisso: DIURNO €7,50 – NOTTURNO €10,00 (Art. 9 D.M. 22/09/2017)</span>
+    <span id="footerLegal">Il servizio a battenti chiusi è solo per medicinali urgenti · Diritto fisso: DIURNO €7,50 – NOTTURNO €10,00 (Art. 9 D.M. 22/09/2017)</span>
     <span id="footerClock">—</span>
   </div>
 </div>
@@ -157,6 +214,75 @@ let POSIZIONI = {};            // nome -> [lat, lng], dal Gist farmacie-pos.json
 let mappa = null, layerMarker = null;
 
 let overrides = {};
+let CONTENUTI = {};            // contenuti editabili dal Gist (contenuti.json): { servizi, annunci }
+const SERVIZI_DEFAULT = ['Holter ECG','Holter Pressorio','Elettrocardiogramma','Misurazione PA'];
+
+// --- Multilingua (bandierine). Si traducono solo le etichette UI, non i nomi/indirizzi
+// delle farmacie né gli annunci (italiano). L'arabo è RTL. ---
+const I18N = {
+  it: { onDuty:'Farmacia di turno', now:'Adesso', conturno:'Conturno', open:'aperto', upcoming:'Prossimi turni', services:'Servizi', communications:'Comunicazioni', shiftEnd:'Fine turno:', noData:'Nessun dato', modified:'modificato', shiftMap:'Turno', us:'Noi', weekRange:'Lun–Sab', updated:'Aggiornato', offline:'Dati locali (offline)', legal:'Il servizio a battenti chiusi è solo per medicinali urgenti · Diritto fisso: DIURNO €7,50 – NOTTURNO €10,00 (Art. 9 D.M. 22/09/2017)' },
+  en: { onDuty:'Pharmacy on duty', now:'Now', conturno:'Co-duty', open:'open', upcoming:'Upcoming shifts', services:'Services', communications:'Announcements', shiftEnd:'Shift ends:', noData:'No data', modified:'modified', shiftMap:'On duty', us:'Us', weekRange:'Mon–Sat', updated:'Updated', offline:'Local data (offline)', legal:'Closed-door service for urgent medicines only · Fixed fee: DAY €7.50 – NIGHT €10.00 (Art. 9 D.M. 22/09/2017)' },
+  fr: { onDuty:'Pharmacie de garde', now:'Maintenant', conturno:'Pharmacie de soutien', open:'ouvert', upcoming:'Prochaines gardes', services:'Services', communications:'Communications', shiftEnd:'Fin de garde :', noData:'Aucune donnée', modified:'modifié', shiftMap:'De garde', us:'Nous', weekRange:'Lun–Sam', updated:'Mis à jour', offline:'Données locales (hors ligne)', legal:'Service à porte fermée uniquement pour médicaments urgents · Forfait : JOUR 7,50 € – NUIT 10,00 € (Art. 9 D.M. 22/09/2017)' },
+  es: { onDuty:'Farmacia de guardia', now:'Ahora', conturno:'Farmacia de apoyo', open:'abierto', upcoming:'Próximas guardias', services:'Servicios', communications:'Comunicaciones', shiftEnd:'Fin de guardia:', noData:'Sin datos', modified:'modificado', shiftMap:'De guardia', us:'Nosotros', weekRange:'Lun–Sáb', updated:'Actualizado', offline:'Datos locales (sin conexión)', legal:'Servicio a puerta cerrada solo para medicamentos urgentes · Tarifa fija: DÍA €7,50 – NOCHE €10,00 (Art. 9 D.M. 22/09/2017)' },
+  de: { onDuty:'Apotheke im Dienst', now:'Jetzt', conturno:'Zusatzdienst', open:'geöffnet', upcoming:'Nächste Dienste', services:'Leistungen', communications:'Mitteilungen', shiftEnd:'Dienstende:', noData:'Keine Daten', modified:'geändert', shiftMap:'Dienst', us:'Wir', weekRange:'Mo–Sa', updated:'Aktualisiert', offline:'Lokale Daten (offline)', legal:'Notdienst bei geschlossener Tür nur für dringende Medikamente · Festgebühr: TAG 7,50 € – NACHT 10,00 € (Art. 9 D.M. 22/09/2017)' },
+  pt: { onDuty:'Farmácia de plantão', now:'Agora', conturno:'Farmácia de apoio', open:'aberto', upcoming:'Próximos plantões', services:'Serviços', communications:'Comunicações', shiftEnd:'Fim do plantão:', noData:'Sem dados', modified:'modificado', shiftMap:'Plantão', us:'Nós', weekRange:'Seg–Sáb', updated:'Atualizado', offline:'Dados locais (offline)', legal:'Serviço de porta fechada apenas para medicamentos urgentes · Taxa fixa: DIA €7,50 – NOITE €10,00 (Art. 9 D.M. 22/09/2017)' },
+  zh: { onDuty:'值班药房', now:'现在', conturno:'协助药房', open:'营业中', upcoming:'接下来的值班', services:'服务', communications:'公告', shiftEnd:'值班结束：', noData:'无数据', modified:'已修改', shiftMap:'值班', us:'我们', weekRange:'周一至周六', updated:'已更新', offline:'本地数据（离线）', legal:'闭门服务仅限急用药品 · 固定费用：白天 €7,50 – 夜间 €10,00（Art. 9 D.M. 22/09/2017）' },
+  ar: { onDuty:'الصيدلية المناوبة', now:'الآن', conturno:'صيدلية مساندة', open:'مفتوحة', upcoming:'المناوبات القادمة', services:'الخدمات', communications:'إعلانات', shiftEnd:'انتهاء المناوبة:', noData:'لا توجد بيانات', modified:'معدّل', shiftMap:'المناوبة', us:'نحن', weekRange:'الإثنين–السبت', updated:'تم التحديث', offline:'بيانات محلية (دون اتصال)', legal:'الخدمة عبر الباب المغلق للأدوية العاجلة فقط · رسم ثابت: نهاراً €7,50 – ليلاً €10,00 (المادة 9 من المرسوم الوزاري 22/09/2017)' },
+  ro: { onDuty:'Farmacie de gardă', now:'Acum', conturno:'Farmacie de sprijin', open:'deschis', upcoming:'Gărzi următoare', services:'Servicii', communications:'Anunțuri', shiftEnd:'Sfârșit gardă:', noData:'Fără date', modified:'modificat', shiftMap:'De gardă', us:'Noi', weekRange:'Lun–Sâm', updated:'Actualizat', offline:'Date locale (offline)', legal:'Serviciu cu ușa închisă doar pentru medicamente urgente · Taxă fixă: ZI €7,50 – NOAPTE €10,00 (Art. 9 D.M. 22/09/2017)' },
+  sq: { onDuty:'Farmaci kujdestare', now:'Tani', conturno:'Farmaci mbështetëse', open:'hapur', upcoming:'Kujdestaritë e ardhshme', services:'Shërbime', communications:'Njoftime', shiftEnd:'Mbarimi i turnit:', noData:'Pa të dhëna', modified:'ndryshuar', shiftMap:'Kujdestare', us:'Ne', weekRange:'Hën–Sht', updated:'Përditësuar', offline:'Të dhëna lokale (offline)', legal:'Shërbim me derë të mbyllur vetëm për barna urgjente · Tarifë fikse: DITË €7,50 – NATË €10,00 (Art. 9 D.M. 22/09/2017)' }
+};
+// QR tessera fedeltà (portale Consorzio InFarmacia). Testi del riquadro [titolo, sottotitolo].
+const FIDELITY_URL = 'https://qrkit.co/eCooTC';
+const I18N_QR = {
+  it: ['Fatti la tessera fedeltà', 'Inquadra il QR · è gratis'],
+  ro: ['Fă-ți cardul de fidelitate', 'Scanează codul QR · e gratis'],
+  sq: ['Merr kartën e besnikërisë', 'Skano kodin QR · falas'],
+  en: ['Get your loyalty card', "Scan the QR · it's free"],
+  fr: ['Obtenez votre carte de fidélité', "Scannez le QR · c'est gratuit"],
+  es: ['Hazte la tarjeta de fidelidad', 'Escanea el QR · es gratis'],
+  de: ['Holen Sie sich Ihre Treuekarte', 'QR scannen · kostenlos'],
+  pt: ['Faça o seu cartão fidelidade', 'Leia o QR · é grátis'],
+  zh: ['办理会员忠诚卡', '扫描二维码 · 免费'],
+  ar: ['احصل على بطاقة الولاء', 'امسح رمز QR · مجاناً']
+};
+const LOCALE = { it:'it-IT', en:'en-GB', fr:'fr-FR', es:'es-ES', de:'de-DE', pt:'pt-PT', zh:'zh-CN', ar:'ar', ro:'ro-RO', sq:'sq-AL' };
+let LANG = 'it';
+let langResetTimer = null;
+function t(k) { return (I18N[LANG] && I18N[LANG][k]) || I18N.it[k] || k; }
+
+// Applica la lingua corrente: etichette statiche, verso del testo (RTL per l'arabo)
+// e ri-render delle parti dinamiche (che usano t()).
+function applyLang() {
+  document.documentElement.lang = LANG;
+  // Arabo: RTL solo sul testo delle etichette (vedi CSS body.rtl), NON sull'intera
+  // impaginazione — altrimenti colonne/mappa/header si specchiano.
+  document.body.classList.toggle('rtl', LANG === 'ar');
+  document.getElementById('barOnDuty').textContent = t('onDuty');
+  document.getElementById('barUpcoming').textContent = t('upcoming');
+  document.getElementById('todayLabel').textContent = t('now');
+  document.getElementById('serviziTitle').textContent = '• ' + t('services') + ' •';
+  document.getElementById('annunciTitle').textContent = '• ' + t('communications') + ' •';
+  document.getElementById('orariTag').textContent = t('weekRange') + ': 08:30–19:30';
+  document.getElementById('footerLegal').textContent = t('legal');
+  const q = I18N_QR[LANG] || I18N_QR.it;
+  document.getElementById('qrTitle').textContent = q[0];
+  document.getElementById('qrSub').textContent = q[1];
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === LANG));
+  updateClock();
+  renderAll();
+}
+function setLang(l) {
+  if (!I18N[l]) return;
+  LANG = l;
+  // Su cellulare la scelta dell'utente resta; sul kiosk torna all'italiano dopo
+  // un po' di inattività, così il prossimo passante trova di nuovo l'italiano.
+  if (isMobile()) { try { localStorage.setItem('bacheca_lang', l); } catch(e) {} }
+  else {
+    clearTimeout(langResetTimer);
+    if (l !== 'it') langResetTimer = setTimeout(() => setLang('it'), 90000);
+  }
+  applyLang();
+}
 
 async function loadBase() {
   const yr = new Date().getFullYear();
@@ -205,11 +331,20 @@ async function loadOverrides() {
     overrides = JSON.parse(content).overrides || {};
     const pf = data.files['farmacie-pos.json'];
     POSIZIONI = (pf && pf.content) ? (JSON.parse(pf.content) || {}) : {};
+    const cf = data.files['contenuti.json'];
+    CONTENUTI = (cf && cf.content) ? (JSON.parse(cf.content) || {}) : {};
+    // Rete di sicurezza: se l'anagrafica locale (data/farmacie.json) non si è caricata
+    // (es. pagina aperta come file://, o offline), usa la copia pubblicata sul Gist.
+    // Solo fallback: se il file locale c'è, vince lui (resta la fonte di verità nel repo).
+    const af = data.files['farmacie.json'];
+    if (af && af.content && !Object.keys(FARMACIE).length) {
+      try { const g = JSON.parse(af.content); if (g && Object.keys(g).length) FARMACIE = g; } catch(e) {}
+    }
     document.getElementById('syncDot').className = 'sync-dot';
-    document.getElementById('syncText').textContent = 'Aggiornato ' + new Date().toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'});
+    document.getElementById('syncText').textContent = t('updated') + ' ' + new Date().toLocaleTimeString(LOCALE[LANG], {hour:'2-digit',minute:'2-digit'});
   } catch(e) {
     document.getElementById('syncDot').className = 'sync-dot err';
-    document.getElementById('syncText').textContent = 'Dati locali (offline)';
+    document.getElementById('syncText').textContent = t('offline');
   }
   renderAll();
 }
@@ -249,13 +384,11 @@ function getTurnoAttivo() {
 function fmtFine(d, ora) {
   const dd = String(d.getDate()).padStart(2,'0');
   const mm = String(d.getMonth()+1).padStart(2,'0');
-  return `Fine turno: ${dd}/${mm} ore ${ora || '8:30'}`;
+  return `${t('shiftEnd')} ${dd}/${mm} · ${ora || '8:30'}`;
 }
 
 function fmtDate(d) {
-  const G = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
-  const M = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
-  return `${G[d.getDay()]} ${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`;
+  return d.toLocaleDateString(LOCALE[LANG], { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 }
 
 function updateClock() {
@@ -308,7 +441,7 @@ function renderToday() {
   const conturnoBlock = document.getElementById('conturnoBlock');
   conturnoBlock.style.display = 'none';
   if (!turno || !turno.t) {
-    document.getElementById('todayName').textContent = 'Nessun dato';
+    document.getElementById('todayName').textContent = t('noData');
     return;
   }
   const isUs = turno.t === 'Della Stazione';
@@ -323,7 +456,7 @@ function renderToday() {
   if (turno.c) {
     const sc = statoConturno(key);
     if (sc.aperto) {
-      document.getElementById('conturnoLabel').textContent = 'Conturno · aperto ' + sc.orario;
+      document.getElementById('conturnoLabel').textContent = t('conturno') + ' · ' + t('open') + ' ' + sc.orario;
       const cn = document.getElementById('conturnoName');
       cn.textContent = 'Farm. ' + turno.c;
       cn.className = 'conturno-name' + (turno.c === 'Della Stazione' ? ' is-us' : '');
@@ -339,7 +472,7 @@ function renderToday() {
   addBadge('badge-fine', fmtFine(fine, turno.fineOra));
   if (turno.straord) addBadge('badge-straord', '★ ' + turno.straord);
   if (turno.nota) addBadge('badge-nota', '📌 ' + turno.nota);
-  if (turno.modificato) addBadge('badge-nota', '✎ modificato');
+  if (turno.modificato) addBadge('badge-nota', '✎ ' + t('modified'));
 }
 
 function renderNext() {
@@ -349,7 +482,6 @@ function renderNext() {
   if (h > 8 || (h === 8 && m >= 30)) start.setDate(start.getDate() + 1);
   const list = document.getElementById('nextList');
   list.innerHTML = '';
-  const G = ['dom','lun','mar','mer','gio','ven','sab'];
   let count = 0, d = new Date(start);
   while (count < 7 && d.getFullYear() <= 2027) {
     const key = toKey(d);
@@ -366,7 +498,7 @@ function renderNext() {
       if (turno.modificato) badges = `<span class="next-mod">✎</span>` + badges;
       if (turno.straord) badges = `<span class="next-mod">★</span>` + badges;
       item.innerHTML = `
-        <span class="next-day">${G[d.getDay()]} ${d.getDate()}/${String(d.getMonth()+1).padStart(2,'0')}</span>
+        <span class="next-day">${d.toLocaleDateString(LOCALE[LANG], {weekday:'short'})} ${d.getDate()}/${String(d.getMonth()+1).padStart(2,'0')}</span>
         <span class="next-name${isUs?' is-us':''}">Farm. ${turno.t}</span>
         <span class="next-badges">${badges}</span>`;
       list.appendChild(item);
@@ -404,17 +536,81 @@ function renderMappa() {
     });
   };
   const { turno, key } = getTurnoAttivo();
-  if (turno && turno.t) aggiungi(turno.t, '#2e7d4f', 'Turno', 11);
-  if (turno && turno.c && statoConturno(key).aperto) aggiungi(turno.c, '#1565c0', 'Conturno', 10);
+  if (turno && turno.t) aggiungi(turno.t, '#2e7d4f', t('shiftMap'), 11);
+  if (turno && turno.c && statoConturno(key).aperto) aggiungi(turno.c, '#1565c0', t('conturno'), 10);
   const noi = POSIZIONI['Della Stazione'] || [44.1014, 9.8233];
   L.circleMarker(noi, { radius: 7, color: '#fff', weight: 2, fillColor: '#888', fillOpacity: 1 })
-    .bindTooltip('Noi', { direction: 'top' }).addTo(layerMarker);
+    .bindTooltip(t('us'), { direction: 'top' }).addTo(layerMarker);
   pts.push(noi);
   if (pts.length === 1) mappa.setView(pts[0], 15);
   else mappa.fitBounds(L.latLngBounds(pts).pad(0.35));
 }
 
-function renderAll() { renderToday(); renderNext(); renderMappa(); }
+// Servizi: lista editabile dal Gist (contenuti.json -> servizi[]). Se assente usa
+// l'elenco di default; se esplicitamente vuota nasconde l'intero box.
+function renderServizi() {
+  const box = document.getElementById('serviziBox');
+  const grid = document.getElementById('serviziGrid');
+  const lista = Array.isArray(CONTENUTI.servizi) ? CONTENUTI.servizi : SERVIZI_DEFAULT;
+  const voci = lista.map(s => (s || '').trim()).filter(Boolean);
+  box.style.display = voci.length ? '' : 'none';
+  grid.innerHTML = '';
+  voci.forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'servizio-item';
+    d.textContent = s;
+    grid.appendChild(d);
+  });
+}
+
+// Annunci: comunicazioni editabili dal Gist (contenuti.json -> annunci[]). Ogni voce
+// { testo, da?, a?, evidenza? }; mostrata solo se oggi è nell'intervallo [da, a]
+// (date opzionali). Gli "evidenza" vanno nel banner in cima, gli altri nel riquadro
+// Comunicazioni a destra.
+function annunciAttivi() {
+  const oggi = toKey(new Date());
+  const lista = Array.isArray(CONTENUTI.annunci) ? CONTENUTI.annunci : [];
+  return lista.filter(a => a && (a.testo || '').trim()
+    && (!a.da || a.da <= oggi) && (!a.a || oggi <= a.a));
+}
+function renderAnnunci() {
+  const attivi = annunciAttivi();
+  const evidenza = attivi.filter(a => a.evidenza);
+  const normali = attivi.filter(a => !a.evidenza);
+  const banner = document.getElementById('annunciBanner');
+  banner.innerHTML = '';
+  evidenza.forEach(a => {
+    const d = document.createElement('div');
+    d.className = 'annuncio-evidenza';
+    d.textContent = a.testo.trim();
+    banner.appendChild(d);
+  });
+  banner.style.display = evidenza.length ? '' : 'none';
+  const box = document.getElementById('annunciBox');
+  const list = document.getElementById('annunciList');
+  list.innerHTML = '';
+  normali.forEach(a => {
+    const d = document.createElement('div');
+    d.className = 'annuncio-item';
+    d.textContent = a.testo.trim();
+    list.appendChild(d);
+  });
+  box.style.display = normali.length ? '' : 'none';
+}
+
+// QR per la tessera fedeltà: generato una volta sola con la libreria locale qrcode.js
+// (offline-safe, nessun servizio esterno). Se la libreria non c'è, il box resta nascosto.
+function renderQR() {
+  const box = document.getElementById('qrBox');
+  if (typeof qrcode === 'undefined') { box.style.display = 'none'; return; }
+  const qr = qrcode(0, 'M');
+  qr.addData(FIDELITY_URL);
+  qr.make();
+  document.getElementById('qrImg').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+  box.style.display = '';
+}
+
+function renderAll() { renderToday(); renderNext(); renderMappa(); renderServizi(); renderAnnunci(); }
 
 function scheduleReload() {
   const now = new Date();
@@ -425,6 +621,10 @@ function scheduleReload() {
 }
 
 async function init() {
+  // Su cellulare riprende l'ultima lingua scelta; sul kiosk parte sempre da italiano.
+  try { const s = localStorage.getItem('bacheca_lang'); if (isMobile() && s && I18N[s]) LANG = s; } catch(e) {}
+  applyLang();
+  renderQR();
   updateClock();
   await Promise.all([loadBase(), loadFarmacie()]);
   await loadOverrides();
