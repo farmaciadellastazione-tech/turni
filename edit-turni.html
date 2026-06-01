@@ -92,6 +92,8 @@
     onclick="apriServizi()">🩺 Servizi</button>
   <button style="background:#ef6c00;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
     onclick="apriAnnunci()">📢 Annunci</button>
+  <button id="anagBtn" style="background:#455a64;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
+    onclick="pubblicaAnagrafica()" title="Copia data/farmacie.json sul Gist come rete di sicurezza">🗂 Pubblica anagrafica</button>
 </div>
 
 <div class="status-bar" id="statusBar">Caricamento...</div>
@@ -213,6 +215,7 @@ const GIST_ID = '8f699fa0fd4566b2bbb2805b76ad482e';
 const GIST_FILE = 'turni-overrides.json';
 const POS_FILE = 'farmacie-pos.json';
 const CONTENUTI_FILE = 'contenuti.json';
+const ANAG_FILE = 'farmacie.json';
 const TOKEN_KEY = 'edit_turni_token';
 
 const FARMACIE = [
@@ -742,6 +745,31 @@ async function salvaServizi() {
     alert('⚠ Errore salvataggio: ' + e.message);
   }
   btn.disabled = false; btn.textContent = '💾 Salva';
+}
+
+// Pubblica l'anagrafica (data/farmacie.json) sul Gist come rete di sicurezza: la
+// bacheca la usa come fallback se il file locale non si carica. Il repo resta la
+// fonte di verità — ripubblicare quando si aggiorna data/farmacie.json.
+async function pubblicaAnagrafica() {
+  const token = getToken();
+  if (!token) { alert('Inserisci prima il GitHub Token (campo in alto nell\'editor).'); return; }
+  const n = Object.keys(FARMACIE_ANAG).length;
+  if (!n) { alert('Anagrafica non caricata (data/farmacie.json). Apri l\'editor servito via http, non come file.'); return; }
+  if (!confirm(`Pubblicare l'anagrafica (${n} farmacie) sul Gist come rete di sicurezza?`)) return;
+  const btn = document.getElementById('anagBtn');
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { [ANAG_FILE]: { content: JSON.stringify(FARMACIE_ANAG, null, 2) } } })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    alert(`✓ Anagrafica pubblicata sul Gist (${n} farmacie). La bacheca la userà come fallback.`);
+  } catch (e) {
+    alert('⚠ Errore: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '🗂 Pubblica anagrafica';
 }
 
 // --- Annunci (comunicazioni mostrate in bacheca, salvate sul Gist: contenuti.json) ---

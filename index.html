@@ -327,6 +327,13 @@ async function loadOverrides() {
     POSIZIONI = (pf && pf.content) ? (JSON.parse(pf.content) || {}) : {};
     const cf = data.files['contenuti.json'];
     CONTENUTI = (cf && cf.content) ? (JSON.parse(cf.content) || {}) : {};
+    // Rete di sicurezza: se l'anagrafica locale (data/farmacie.json) non si è caricata
+    // (es. pagina aperta come file://, o offline), usa la copia pubblicata sul Gist.
+    // Solo fallback: se il file locale c'è, vince lui (resta la fonte di verità nel repo).
+    const af = data.files['farmacie.json'];
+    if (af && af.content && !Object.keys(FARMACIE).length) {
+      try { const g = JSON.parse(af.content); if (g && Object.keys(g).length) FARMACIE = g; } catch(e) {}
+    }
     document.getElementById('syncDot').className = 'sync-dot';
     document.getElementById('syncText').textContent = t('updated') + ' ' + new Date().toLocaleTimeString(LOCALE[LANG], {hour:'2-digit',minute:'2-digit'});
   } catch(e) {
