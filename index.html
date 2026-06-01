@@ -62,6 +62,13 @@
   .servizi-title { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #7ec8a0; margin-bottom: 8px; }
   .servizi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
   .servizio-item { background: #2e7d4f; border-radius: 4px; padding: 5px 8px; font-size: 11px; font-weight: 700; text-align: center; color: #fff; }
+  .annunci-banner { background: #fff8e1; border-bottom: 3px solid #ff9800; padding: 8px 18px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; }
+  .annuncio-evidenza { font-size: 17px; font-weight: 700; color: #7a4f00; display: flex; align-items: center; gap: 8px; }
+  .annuncio-evidenza::before { content: '📢'; font-size: 18px; }
+  .annunci-box { background: #fff8e1; border-top: 1px solid #ffe0a3; padding: 10px 14px; flex-shrink: 0; }
+  .annunci-box-title { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #b07d00; margin-bottom: 6px; }
+  .annuncio-item { font-size: 12px; color: #5d4200; padding: 3px 0; border-bottom: 1px solid #ffe9bf; }
+  .annuncio-item:last-child { border-bottom: none; }
   .footer { background: #1a1a1a; color: #aaa; font-size: 10px; padding: 5px 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
   .sync-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #4caf50; margin-right: 5px; vertical-align: middle; }
   .sync-dot.err { background: #f44336; }
@@ -92,6 +99,8 @@
       <div class="orari-tag">Lun–Sab: 08:30–19:30</div>
     </div>
   </div>
+
+  <div class="annunci-banner" id="annunciBanner" style="display:none"></div>
 
   <div class="body">
     <div class="left">
@@ -131,6 +140,10 @@
       <div class="servizi-box" id="serviziBox">
         <div class="servizi-title">• Servizi •</div>
         <div class="servizi-grid" id="serviziGrid"></div>
+      </div>
+      <div class="annunci-box" id="annunciBox" style="display:none">
+        <div class="annunci-box-title">• Comunicazioni •</div>
+        <div id="annunciList"></div>
       </div>
     </div>
   </div>
@@ -430,7 +443,42 @@ function renderServizi() {
   });
 }
 
-function renderAll() { renderToday(); renderNext(); renderMappa(); renderServizi(); }
+// Annunci: comunicazioni editabili dal Gist (contenuti.json -> annunci[]). Ogni voce
+// { testo, da?, a?, evidenza? }; mostrata solo se oggi è nell'intervallo [da, a]
+// (date opzionali). Gli "evidenza" vanno nel banner in cima, gli altri nel riquadro
+// Comunicazioni a destra.
+function annunciAttivi() {
+  const oggi = toKey(new Date());
+  const lista = Array.isArray(CONTENUTI.annunci) ? CONTENUTI.annunci : [];
+  return lista.filter(a => a && (a.testo || '').trim()
+    && (!a.da || a.da <= oggi) && (!a.a || oggi <= a.a));
+}
+function renderAnnunci() {
+  const attivi = annunciAttivi();
+  const evidenza = attivi.filter(a => a.evidenza);
+  const normali = attivi.filter(a => !a.evidenza);
+  const banner = document.getElementById('annunciBanner');
+  banner.innerHTML = '';
+  evidenza.forEach(a => {
+    const d = document.createElement('div');
+    d.className = 'annuncio-evidenza';
+    d.textContent = a.testo.trim();
+    banner.appendChild(d);
+  });
+  banner.style.display = evidenza.length ? '' : 'none';
+  const box = document.getElementById('annunciBox');
+  const list = document.getElementById('annunciList');
+  list.innerHTML = '';
+  normali.forEach(a => {
+    const d = document.createElement('div');
+    d.className = 'annuncio-item';
+    d.textContent = a.testo.trim();
+    list.appendChild(d);
+  });
+  box.style.display = normali.length ? '' : 'none';
+}
+
+function renderAll() { renderToday(); renderNext(); renderMappa(); renderServizi(); renderAnnunci(); }
 
 function scheduleReload() {
   const now = new Date();
