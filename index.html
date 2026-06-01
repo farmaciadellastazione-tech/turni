@@ -22,6 +22,15 @@
   .lang-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .lang-btn.active { border-color: #2e7d4f; opacity: 1; }
   .lang-btn:hover { opacity: 1; }
+  /* Arabo (body.rtl): solo il testo delle etichette tradotte va in RTL e allineato a
+     destra; l'impaginazione (colonne, header, mappa) resta invariata. Nomi/indirizzi
+     farmacie, annunci (italiano) e servizi restano LTR. */
+  body.rtl .section-bar,
+  body.rtl .turno-label,
+  body.rtl .servizi-title,
+  body.rtl .annunci-box-title,
+  body.rtl #footerLegal,
+  body.rtl .qr-text { direction: rtl; text-align: right; }
   .body { display: grid; grid-template-columns: 1fr 340px; flex: 1; min-height: 0; }
   .left { display: flex; flex-direction: column; }
   .section-bar { background: #2e7d4f; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 6px 16px; flex-shrink: 0; }
@@ -239,7 +248,9 @@ function t(k) { return (I18N[LANG] && I18N[LANG][k]) || I18N.it[k] || k; }
 // e ri-render delle parti dinamiche (che usano t()).
 function applyLang() {
   document.documentElement.lang = LANG;
-  document.documentElement.dir = (LANG === 'ar') ? 'rtl' : 'ltr';
+  // Arabo: RTL solo sul testo delle etichette (vedi CSS body.rtl), NON sull'intera
+  // impaginazione — altrimenti colonne/mappa/header si specchiano.
+  document.body.classList.toggle('rtl', LANG === 'ar');
   document.getElementById('barOnDuty').textContent = t('onDuty');
   document.getElementById('barUpcoming').textContent = t('upcoming');
   document.getElementById('todayLabel').textContent = t('now');
