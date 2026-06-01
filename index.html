@@ -132,6 +132,8 @@
       <button class="lang-btn" data-lang="pt" onclick="setLang('pt')" title="Português"><img src="https://flagcdn.com/w40/pt.png" alt="PT"></button>
       <button class="lang-btn" data-lang="zh" onclick="setLang('zh')" title="中文"><img src="https://flagcdn.com/w40/cn.png" alt="ZH"></button>
       <button class="lang-btn" data-lang="ar" onclick="setLang('ar')" title="العربية"><img src="https://flagcdn.com/w40/sa.png" alt="AR"></button>
+      <button class="lang-btn" data-lang="ro" onclick="setLang('ro')" title="Română"><img src="https://flagcdn.com/w40/ro.png" alt="RO"></button>
+      <button class="lang-btn" data-lang="sq" onclick="setLang('sq')" title="Shqip"><img src="https://flagcdn.com/w40/al.png" alt="SQ"></button>
     </div>
     <div class="header-right">
       <div class="clock-time" id="clockTime">--:--</div>
@@ -225,12 +227,16 @@ const I18N = {
   de: { onDuty:'Apotheke im Dienst', now:'Jetzt', conturno:'Zusatzdienst', open:'geöffnet', upcoming:'Nächste Dienste', services:'Leistungen', communications:'Mitteilungen', shiftEnd:'Dienstende:', noData:'Keine Daten', modified:'geändert', shiftMap:'Dienst', us:'Wir', weekRange:'Mo–Sa', updated:'Aktualisiert', offline:'Lokale Daten (offline)', legal:'Notdienst bei geschlossener Tür nur für dringende Medikamente · Festgebühr: TAG 7,50 € – NACHT 10,00 € (Art. 9 D.M. 22/09/2017)' },
   pt: { onDuty:'Farmácia de plantão', now:'Agora', conturno:'Farmácia de apoio', open:'aberto', upcoming:'Próximos plantões', services:'Serviços', communications:'Comunicações', shiftEnd:'Fim do plantão:', noData:'Sem dados', modified:'modificado', shiftMap:'Plantão', us:'Nós', weekRange:'Seg–Sáb', updated:'Atualizado', offline:'Dados locais (offline)', legal:'Serviço de porta fechada apenas para medicamentos urgentes · Taxa fixa: DIA €7,50 – NOITE €10,00 (Art. 9 D.M. 22/09/2017)' },
   zh: { onDuty:'值班药房', now:'现在', conturno:'协助药房', open:'营业中', upcoming:'接下来的值班', services:'服务', communications:'公告', shiftEnd:'值班结束：', noData:'无数据', modified:'已修改', shiftMap:'值班', us:'我们', weekRange:'周一至周六', updated:'已更新', offline:'本地数据（离线）', legal:'闭门服务仅限急用药品 · 固定费用：白天 €7,50 – 夜间 €10,00（Art. 9 D.M. 22/09/2017）' },
-  ar: { onDuty:'الصيدلية المناوبة', now:'الآن', conturno:'صيدلية مساندة', open:'مفتوحة', upcoming:'المناوبات القادمة', services:'الخدمات', communications:'إعلانات', shiftEnd:'انتهاء المناوبة:', noData:'لا توجد بيانات', modified:'معدّل', shiftMap:'المناوبة', us:'نحن', weekRange:'الإثنين–السبت', updated:'تم التحديث', offline:'بيانات محلية (دون اتصال)', legal:'الخدمة عبر الباب المغلق للأدوية العاجلة فقط · رسم ثابت: نهاراً €7,50 – ليلاً €10,00 (المادة 9 من المرسوم الوزاري 22/09/2017)' }
+  ar: { onDuty:'الصيدلية المناوبة', now:'الآن', conturno:'صيدلية مساندة', open:'مفتوحة', upcoming:'المناوبات القادمة', services:'الخدمات', communications:'إعلانات', shiftEnd:'انتهاء المناوبة:', noData:'لا توجد بيانات', modified:'معدّل', shiftMap:'المناوبة', us:'نحن', weekRange:'الإثنين–السبت', updated:'تم التحديث', offline:'بيانات محلية (دون اتصال)', legal:'الخدمة عبر الباب المغلق للأدوية العاجلة فقط · رسم ثابت: نهاراً €7,50 – ليلاً €10,00 (المادة 9 من المرسوم الوزاري 22/09/2017)' },
+  ro: { onDuty:'Farmacie de gardă', now:'Acum', conturno:'Farmacie de sprijin', open:'deschis', upcoming:'Gărzi următoare', services:'Servicii', communications:'Anunțuri', shiftEnd:'Sfârșit gardă:', noData:'Fără date', modified:'modificat', shiftMap:'De gardă', us:'Noi', weekRange:'Lun–Sâm', updated:'Actualizat', offline:'Date locale (offline)', legal:'Serviciu cu ușa închisă doar pentru medicamente urgente · Taxă fixă: ZI €7,50 – NOAPTE €10,00 (Art. 9 D.M. 22/09/2017)' },
+  sq: { onDuty:'Farmaci kujdestare', now:'Tani', conturno:'Farmaci mbështetëse', open:'hapur', upcoming:'Kujdestaritë e ardhshme', services:'Shërbime', communications:'Njoftime', shiftEnd:'Mbarimi i turnit:', noData:'Pa të dhëna', modified:'ndryshuar', shiftMap:'Kujdestare', us:'Ne', weekRange:'Hën–Sht', updated:'Përditësuar', offline:'Të dhëna lokale (offline)', legal:'Shërbim me derë të mbyllur vetëm për barna urgjente · Tarifë fikse: DITË €7,50 – NATË €10,00 (Art. 9 D.M. 22/09/2017)' }
 };
 // QR tessera fedeltà (portale Consorzio InFarmacia). Testi del riquadro [titolo, sottotitolo].
 const FIDELITY_URL = 'https://qrkit.co/eCooTC';
 const I18N_QR = {
   it: ['Fatti la tessera fedeltà', 'Inquadra il QR · è gratis'],
+  ro: ['Fă-ți cardul de fidelitate', 'Scanează codul QR · e gratis'],
+  sq: ['Merr kartën e besnikërisë', 'Skano kodin QR · falas'],
   en: ['Get your loyalty card', "Scan the QR · it's free"],
   fr: ['Obtenez votre carte de fidélité', "Scannez le QR · c'est gratuit"],
   es: ['Hazte la tarjeta de fidelidad', 'Escanea el QR · es gratis'],
@@ -239,7 +245,7 @@ const I18N_QR = {
   zh: ['办理会员忠诚卡', '扫描二维码 · 免费'],
   ar: ['احصل على بطاقة الولاء', 'امسح رمز QR · مجاناً']
 };
-const LOCALE = { it:'it-IT', en:'en-GB', fr:'fr-FR', es:'es-ES', de:'de-DE', pt:'pt-PT', zh:'zh-CN', ar:'ar' };
+const LOCALE = { it:'it-IT', en:'en-GB', fr:'fr-FR', es:'es-ES', de:'de-DE', pt:'pt-PT', zh:'zh-CN', ar:'ar', ro:'ro-RO', sq:'sq-AL' };
 let LANG = 'it';
 let langResetTimer = null;
 function t(k) { return (I18N[LANG] && I18N[LANG][k]) || I18N.it[k] || k; }
