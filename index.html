@@ -71,7 +71,10 @@
   .next-cont { font-size: 10px; color: #2e7d4f; }
   .next-mod { font-size: 10px; color: #e65100; font-weight: 600; }
   .right { display: flex; flex-direction: column; min-height: 0; overflow: hidden; border-left: 2px solid #2e7d4f; background: #fff; }
-  .map-area { flex: 1; min-height: 0; overflow: hidden; }
+  /* La mappa non deve restare schiacciata: ha una soglia minima. Se lo spazio non basta
+     (viewport basso), è la colonna (.right overflow:hidden) a tagliare l'ultimo QR in
+     fondo, non la mappa. Sul kiosk alto c'è posto per mappa grande + servizi + 3 QR. */
+  .map-area { flex: 1; min-height: 320px; overflow: hidden; }
   .map-iframe { width: 100%; height: 100%; border: none; }
   .servizi-box { background: #1a3a28; color: #fff; padding: 12px 14px; flex-shrink: 0; }
   .servizi-title { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #7ec8a0; margin-bottom: 8px; }
