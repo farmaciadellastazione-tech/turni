@@ -39,17 +39,17 @@
   .body { display: grid; grid-template-columns: 1.45fr 1fr; grid-template-rows: minmax(0, 1fr); flex: 1; min-height: 0; }
   .left { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
   .section-bar { background: #2e7d4f; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 6px 16px; flex-shrink: 0; }
-  .turno-main { background: #fff; padding: 20px 18px 16px; border-bottom: 1px solid #e0e8e2; flex-shrink: 0; }
+  .turno-main { background: #fff; padding: 26px 20px 22px; border-bottom: 1px solid #e0e8e2; flex-shrink: 0; }
   /* Farmacie aperte ora: elencate per vicinanza (la più vicina in alto), tutte con la
-     STESSA grafica. Più risalto rispetto ai "prossimi turni": testo e spaziature maggiori. */
-  .farm-card + .farm-card { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e8e2; }
+     STESSA grafica. Forte risalto rispetto ai "prossimi turni": testo e spaziature ampie. */
+  .farm-card + .farm-card { margin-top: 26px; padding-top: 26px; border-top: 1px solid #e0e8e2; }
   .farm-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-  .farm-dist { font-size: 18px; font-weight: 800; color: #2e7d4f; white-space: nowrap; }
-  .farm-hours { margin-top: 8px; font-size: 16px; font-weight: 700; color: #555; }
-  .turno-name { font-size: 34px; font-weight: 800; color: #1a1a1a; line-height: 1.1; }
+  .farm-dist { font-size: 21px; font-weight: 800; color: #2e7d4f; white-space: nowrap; }
+  .farm-hours { margin-top: 10px; font-size: 18px; font-weight: 700; color: #555; }
+  .turno-name { font-size: 40px; font-weight: 800; color: #1a1a1a; line-height: 1.1; }
   .turno-name.is-us { color: #2e7d4f; }
   .turno-contact { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
-  .contact-row { font-size: 17px; color: #333; }
+  .contact-row { font-size: 19px; color: #333; }
   .contact-row .c-name { font-weight: 700; color: #1a1a1a; }
   .contact-row .c-addr { color: #444; }
   .contact-row .c-tel { color: #1a1a1a; font-weight: 700; }
@@ -608,7 +608,7 @@ function renderNext() {
   // ~2250px). Quelli che non entrano vengono tagliati da .prossimi { overflow:hidden },
   // quindi su schermi più bassi se ne vedono meno senza rompere il layout.
   let count = 0, d = new Date(start);
-  while (count < 12 && d.getFullYear() <= 2027) {
+  while (count < 9 && d.getFullYear() <= 2027) {
     const key = toKey(d);
     const turno = getTurnoGiorno(key);
     if (turno && turno.t) {
