@@ -26,7 +26,7 @@
      destra; l'impaginazione (colonne, header, mappa) resta invariata. Nomi/indirizzi
      farmacie, annunci (italiano) e servizi restano LTR. */
   body.rtl .section-bar,
-  body.rtl .turno-label,
+  body.rtl .farm-hours,
   body.rtl .servizi-title,
   body.rtl .annunci-box-title,
   body.rtl #footerLegal,
@@ -35,14 +35,15 @@
   .left { display: flex; flex-direction: column; }
   .section-bar { background: #2e7d4f; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 6px 16px; flex-shrink: 0; }
   .turno-main { background: #fff; padding: 14px 16px 10px; border-bottom: 1px solid #e0e8e2; flex-shrink: 0; }
-  .turno-label { font-size: 10px; color: #888; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  /* Farmacie aperte ora: elencate per vicinanza (la più vicina in alto), tutte con la
+     STESSA grafica. Il ruolo turno/conturno non è enfatizzato: conta nome, distanza,
+     contatti e orario di apertura. */
+  .farm-card + .farm-card { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e0e8e2; }
+  .farm-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .farm-dist { font-size: 15px; font-weight: 800; color: #2e7d4f; white-space: nowrap; }
+  .farm-hours { margin-top: 6px; font-size: 14px; font-weight: 700; color: #555; }
   .turno-name { font-size: 28px; font-weight: 800; color: #1a1a1a; line-height: 1.1; }
   .turno-name.is-us { color: #2e7d4f; }
-  /* Conturno con la STESSA grafica del turno: pari risalto, chi legge sceglie per vicinanza.
-     La differenza (turno 24h vs conturno che chiude) è solo nell'etichetta, non nel corpo. */
-  .conturno-block { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e0e8e2; }
-  .conturno-name { font-size: 28px; font-weight: 800; color: #1a1a1a; line-height: 1.1; }
-  .conturno-name.is-us { color: #2e7d4f; }
   .turno-contact { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
   .contact-row { font-size: 15px; color: #333; }
   .contact-row .c-name { font-weight: 700; color: #1a1a1a; }
@@ -151,17 +152,7 @@
   <div class="body">
     <div class="left">
       <div class="section-bar" id="barOnDuty">Farmacia di turno</div>
-      <div class="turno-main">
-        <div class="turno-label" id="todayLabel">Adesso</div>
-        <div class="turno-name" id="todayName">—</div>
-        <div class="turno-contact" id="todayContact"></div>
-        <div class="turno-meta" id="todayMeta"></div>
-        <div class="conturno-block" id="conturnoBlock" style="display:none">
-          <div class="turno-label" id="conturnoLabel">Conturno</div>
-          <div class="conturno-name" id="conturnoName">—</div>
-          <div class="turno-contact" id="conturnoContact"></div>
-        </div>
-      </div>
+      <div class="turno-main"><div class="turno-list" id="turnoList"></div></div>
       <div class="section-bar" id="barUpcoming">Prossimi turni</div>
       <div class="prossimi"><div class="next-list" id="nextList"></div></div>
       <!-- Social: visibile solo su mobile (vedi isMobile()); sul kiosk i link sono nascosti
@@ -299,18 +290,18 @@ const I18N_QR_TURNI = {
   zh: ['想知道哪家药房值班？', '扫码：在手机上查看本看板'],
   ar: ['تريد معرفة الصيدلية المناوبة؟', 'امسح: اللوحة على هاتفك']
 };
-// Etichette orario delle due farmacie: [turno aperto 24h, conturno "aperta fino" (+ ora)].
+// Etichette: [turno aperto 24h, conturno "aperta fino" (+ ora), "qui" (distanza nulla)].
 const I18N_ORARIO = {
-  it: ['aperta 24h', 'aperta fino'],
-  ro: ['deschisă 24h', 'deschisă până la'],
-  sq: ['hapur 24 orë', 'hapur deri në'],
-  en: ['open 24h', 'open until'],
-  fr: ['ouverte 24h', "ouverte jusqu'à"],
-  es: ['abierta 24h', 'abierta hasta'],
-  de: ['24h geöffnet', 'geöffnet bis'],
-  pt: ['aberta 24h', 'aberta até'],
-  zh: ['24小时营业', '营业至'],
-  ar: ['مفتوحة 24 ساعة', 'مفتوحة حتى']
+  it: ['aperta 24h', 'aperta fino', 'qui'],
+  ro: ['deschisă 24h', 'deschisă până la', 'aici'],
+  sq: ['hapur 24 orë', 'hapur deri në', 'këtu'],
+  en: ['open 24h', 'open until', 'here'],
+  fr: ['ouverte 24h', "ouverte jusqu'à", 'ici'],
+  es: ['abierta 24h', 'abierta hasta', 'aquí'],
+  de: ['24h geöffnet', 'geöffnet bis', 'hier'],
+  pt: ['aberta 24h', 'aberta até', 'aqui'],
+  zh: ['24小时营业', '营业至', '这里'],
+  ar: ['مفتوحة 24 ساعة', 'مفتوحة حتى', 'هنا']
 };
 const LOCALE = { it:'it-IT', en:'en-GB', fr:'fr-FR', es:'es-ES', de:'de-DE', pt:'pt-PT', zh:'zh-CN', ar:'ar', ro:'ro-RO', sq:'sq-AL' };
 let LANG = 'it';
@@ -326,7 +317,6 @@ function applyLang() {
   document.body.classList.toggle('rtl', LANG === 'ar');
   document.getElementById('barOnDuty').textContent = t('onDuty');
   document.getElementById('barUpcoming').textContent = t('upcoming');
-  document.getElementById('todayLabel').textContent = t('now') + ' · ' + (I18N_ORARIO[LANG] || I18N_ORARIO.it)[0];
   document.getElementById('serviziTitle').textContent = '• ' + t('services') + ' •';
   document.getElementById('annunciTitle').textContent = '• ' + t('communications') + ' •';
   document.getElementById('orariTag').textContent = t('weekRange') + ': 08:30–19:30';
@@ -456,12 +446,6 @@ function getTurnoAttivo() {
   return { turno, fine, key };
 }
 
-function fmtFine(d, ora) {
-  const dd = String(d.getDate()).padStart(2,'0');
-  const mm = String(d.getMonth()+1).padStart(2,'0');
-  return `${t('shiftEnd')} ${dd}/${mm} · ${ora || '8:30'}`;
-}
-
 function fmtDate(d) {
   return d.toLocaleDateString(LOCALE[LANG], { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 }
@@ -508,46 +492,93 @@ function statoConturno(key) {
   return { aperto: now >= apertura && now <= chiusura, orario: '08:30–' + fine, fine };
 }
 
+// Distanza in linea d'aria (km) dalla Farmacia della Stazione (posizione del kiosk).
+// Coordinate dal Gist (POSIZIONI). Per i turni composti (es. "Di Marola/Maimone")
+// usa la più vicina delle due. null se mancano le coordinate.
+function haversineKm(a, b) {
+  const R = 6371, toRad = x => x * Math.PI / 180;
+  const dLat = toRad(b[0] - a[0]), dLon = toRad(b[1] - a[1]);
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+function distanzaKm(nome) {
+  const ref = POSIZIONI['Della Stazione'];
+  if (!Array.isArray(ref)) return null;
+  let best = null;
+  for (const n of nome.split('/').map(s => s.trim())) {
+    const p = POSIZIONI[n];
+    if (Array.isArray(p) && p.length === 2) { const d = haversineKm(ref, p); if (best == null || d < best) best = d; }
+  }
+  return best;
+}
+function fmtDist(nome, dist) {
+  const here = (I18N_ORARIO[LANG] || I18N_ORARIO.it)[2];
+  if (nome === 'Della Stazione' || (dist != null && dist < 0.05)) return here;
+  if (dist == null) return '';
+  return dist.toLocaleString(LOCALE[LANG] || 'it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' km';
+}
+
+// Crea una scheda farmacia (stessa grafica per tutte): nome · distanza, contatti, orario.
+function buildFarmCard(e) {
+  const card = document.createElement('div');
+  card.className = 'farm-card';
+  const head = document.createElement('div');
+  head.className = 'farm-head';
+  const name = document.createElement('div');
+  name.className = 'turno-name' + (e.nome === 'Della Stazione' ? ' is-us' : '');
+  name.textContent = 'Farm. ' + e.nome;
+  const dist = document.createElement('div');
+  dist.className = 'farm-dist';
+  dist.textContent = fmtDist(e.nome, e.dist);
+  head.appendChild(name); head.appendChild(dist);
+  card.appendChild(head);
+  const contact = document.createElement('div');
+  contact.className = 'turno-contact';
+  renderContactInto(contact, e.nome);
+  card.appendChild(contact);
+  const hours = document.createElement('div');
+  hours.className = 'farm-hours';
+  hours.textContent = '🕓 ' + e.orario;
+  card.appendChild(hours);
+  if (e.badges && e.badges.length) {
+    const meta = document.createElement('div');
+    meta.className = 'turno-meta';
+    e.badges.forEach(b => { const s = document.createElement('span'); s.className = b.cls; s.textContent = b.txt; meta.appendChild(s); });
+    card.appendChild(meta);
+  }
+  return card;
+}
+
+// Mostra le farmacie aperte ora (turno 24h + conturno se aperto) ordinate per
+// vicinanza al kiosk: il ruolo turno/conturno non è enfatizzato, conta dove sono e
+// fino a quando sono aperte. La sera (conturno chiuso) resta solo il turno 24h.
 function renderToday() {
-  const { turno, fine, key } = getTurnoAttivo();
-  const meta = document.getElementById('todayMeta');
-  meta.innerHTML = '';
-  document.getElementById('todayContact').innerHTML = '';
-  const conturnoBlock = document.getElementById('conturnoBlock');
-  conturnoBlock.style.display = 'none';
+  const { turno, key } = getTurnoAttivo();
+  const cont = document.getElementById('turnoList');
+  cont.innerHTML = '';
   if (!turno || !turno.t) {
-    document.getElementById('todayName').textContent = t('noData');
+    const card = document.createElement('div');
+    card.className = 'farm-card';
+    const name = document.createElement('div');
+    name.className = 'turno-name';
+    name.textContent = t('noData');
+    card.appendChild(name); cont.appendChild(card);
     return;
   }
-  const isUs = turno.t === 'Della Stazione';
-  const nameEl = document.getElementById('todayName');
-  nameEl.textContent = 'Farm. ' + turno.t;
-  nameEl.className = 'turno-name' + (isUs ? ' is-us' : '');
-  renderContactInto(document.getElementById('todayContact'), turno.t);
-
-  // Conturno (supporto a orario minimo, in genere nei festivi): in evidenza con
-  // nome + indirizzo + telefono + orario. Mostrato SOLO mentre è aperto:
-  // dopo le 19:30 (20:00 a luglio/agosto) resta solo la farmacia di turno 24h.
+  const O = I18N_ORARIO[LANG] || I18N_ORARIO.it;
+  const entries = [];
+  const badges = [];
+  if (turno.straord) badges.push({ cls: 'badge-straord', txt: '★ ' + turno.straord });
+  if (turno.nota) badges.push({ cls: 'badge-nota', txt: '📌 ' + turno.nota });
+  if (turno.modificato) badges.push({ cls: 'badge-nota', txt: '✎ ' + t('modified') });
+  entries.push({ nome: turno.t, orario: O[0], badges });           // turno 24h
   if (turno.c) {
     const sc = statoConturno(key);
-    if (sc.aperto) {
-      document.getElementById('conturnoLabel').textContent = t('conturno') + ' · ' + (I18N_ORARIO[LANG] || I18N_ORARIO.it)[1] + ' ' + sc.fine;
-      const cn = document.getElementById('conturnoName');
-      cn.textContent = 'Farm. ' + turno.c;
-      cn.className = 'conturno-name' + (turno.c === 'Della Stazione' ? ' is-us' : '');
-      renderContactInto(document.getElementById('conturnoContact'), turno.c);
-      conturnoBlock.style.display = '';
-    }
+    if (sc.aperto) entries.push({ nome: turno.c, orario: O[1] + ' ' + sc.fine, badges: [] });  // conturno
   }
-
-  const addBadge = (cls, txt) => {
-    const s = document.createElement('span');
-    s.className = cls; s.textContent = txt; meta.appendChild(s);
-  };
-  addBadge('badge-fine', fmtFine(fine, turno.fineOra));
-  if (turno.straord) addBadge('badge-straord', '★ ' + turno.straord);
-  if (turno.nota) addBadge('badge-nota', '📌 ' + turno.nota);
-  if (turno.modificato) addBadge('badge-nota', '✎ ' + t('modified'));
+  entries.forEach(e => e.dist = distanzaKm(e.nome));
+  entries.sort((a, b) => (a.dist == null ? Infinity : a.dist) - (b.dist == null ? Infinity : b.dist));
+  entries.forEach(e => cont.appendChild(buildFarmCard(e)));
 }
 
 function renderNext() {
