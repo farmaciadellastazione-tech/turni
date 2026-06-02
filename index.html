@@ -39,9 +39,13 @@
   .body { display: grid; grid-template-columns: 1.45fr 1fr; grid-template-rows: minmax(0, 1fr); flex: 1; min-height: 0; }
   .left { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
   .section-bar { background: #2e7d4f; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 6px 16px; flex-shrink: 0; }
-  .turno-main { background: #fff; padding: 26px 20px 22px; border-bottom: 1px solid #e0e8e2; flex-shrink: 0; }
-  /* Farmacie aperte ora: elencate per vicinanza (la più vicina in alto), tutte con la
-     STESSA grafica. Forte risalto rispetto ai "prossimi turni": testo e spaziature ampie. */
+  /* La sezione "di turno oggi" si espande per occupare lo spazio rimasto: le CARD stesse
+     crescono (flex) col contenuto centrato, così riempiono anche di sera con una sola
+     farmacia. I "prossimi turni" sotto restano una lista compatta (flex:0). */
+  .turno-main { background: #fff; padding: 26px 20px 22px; border-bottom: 1px solid #e0e8e2; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  .turno-list { flex: 1; display: flex; flex-direction: column; }
+  .farm-card { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  /* Forte risalto rispetto ai "prossimi turni": testo e spaziature ampie. */
   .farm-card + .farm-card { margin-top: 26px; padding-top: 26px; border-top: 1px solid #e0e8e2; }
   .farm-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
   .farm-dist { font-size: 21px; font-weight: 800; color: #2e7d4f; white-space: nowrap; }
@@ -59,7 +63,7 @@
   .badge-contorno { background: #e8f5e9; color: #2e7d4f; border: 1px solid #a5d6a7; border-radius: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; }
   .badge-straord { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; border-radius: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; }
   .badge-nota { background: #fce4ec; color: #880e4f; border: 1px solid #f48fb1; border-radius: 4px; font-size: 11px; padding: 2px 8px; }
-  .prossimi { flex: 1; overflow: hidden; }
+  .prossimi { flex: 0 1 auto; overflow: hidden; }
   .next-list { padding: 0; }
   .next-item { display: flex; align-items: center; padding: 5px 16px; border-bottom: 1px solid #f0f4f1; gap: 10px; }
   .next-day { font-size: 11px; color: #888; width: 80px; flex-shrink: 0; }
