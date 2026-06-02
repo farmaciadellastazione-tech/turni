@@ -31,7 +31,9 @@
   body.rtl .annunci-box-title,
   body.rtl #footerLegal,
   body.rtl .qr-text { direction: rtl; text-align: right; }
-  .body { display: grid; grid-template-columns: 1fr 460px; flex: 1; min-height: 0; }
+  /* Colonne proporzionali (non px fissi): il kiosk è ad alta risoluzione (~3050×2250),
+     una larghezza fissa renderebbe la colonna destra/mappa una sottile striscia. */
+  .body { display: grid; grid-template-columns: 1.45fr 1fr; flex: 1; min-height: 0; }
   .left { display: flex; flex-direction: column; }
   .section-bar { background: #2e7d4f; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 6px 16px; flex-shrink: 0; }
   .turno-main { background: #fff; padding: 14px 16px 10px; border-bottom: 1px solid #e0e8e2; flex-shrink: 0; }
@@ -593,8 +595,11 @@ function renderNext() {
   if (h > 8 || (h === 8 && m >= 30)) start.setDate(start.getDate() + 1);
   const list = document.getElementById('nextList');
   list.innerHTML = '';
+  // Ne genera molti: lo spazio disponibile varia con la risoluzione (il kiosk è alto
+  // ~2250px). Quelli che non entrano vengono tagliati da .prossimi { overflow:hidden },
+  // quindi su schermi più bassi se ne vedono meno senza rompere il layout.
   let count = 0, d = new Date(start);
-  while (count < 7 && d.getFullYear() <= 2027) {
+  while (count < 18 && d.getFullYear() <= 2027) {
     const key = toKey(d);
     const turno = getTurnoGiorno(key);
     if (turno && turno.t) {
