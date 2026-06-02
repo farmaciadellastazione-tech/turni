@@ -173,6 +173,16 @@
           <div class="qr-sub" id="qrSub">Inquadra il QR · è gratis</div>
         </div>
       </div>
+      <!-- Secondo QR: codice punto vendita (@PDV@...). Va inquadrato dallo scanner
+           DENTRO l'app del circuito, non dalla fotocamera. Serve a chi ha già l'app
+           per agganciare la Farmacia della Stazione. -->
+      <div class="qr-box" id="qrBoxApp" style="display:none">
+        <div class="qr-img" id="qrImgApp"></div>
+        <div class="qr-text">
+          <div class="qr-title" id="qrTitleApp">Hai già l’app? Aggiungi la farmacia</div>
+          <div class="qr-sub" id="qrSubApp">Scansiona dallo scanner dell’app</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -224,6 +234,21 @@ const I18N_QR = {
   zh: ['办理会员忠诚卡', '扫描二维码 · 免费'],
   ar: ['احصل على بطاقة الولاء', 'امسح رمز QR · مجاناً']
 };
+// Secondo QR: codice punto vendita della farmacia, da inquadrare DENTRO l'app del
+// circuito (non con la fotocamera). Testi del riquadro [titolo, sottotitolo].
+const PDV_CODE = '@PDV@00009423@';
+const I18N_QR_APP = {
+  it: ['Hai già l’app? Aggiungi la farmacia', 'Scansiona dallo scanner dell’app'],
+  ro: ['Ai deja aplicația? Adaugă farmacia', 'Scanează din scanerul aplicației'],
+  sq: ['E ke aplikacionin? Shto farmacinë', 'Skano nga skaneri i aplikacionit'],
+  en: ['Already have the app? Add the pharmacy', 'Scan from the app’s scanner'],
+  fr: ['Vous avez l’appli ? Ajoutez la pharmacie', 'Scannez depuis le scanner de l’appli'],
+  es: ['¿Ya tienes la app? Añade la farmacia', 'Escanea desde el escáner de la app'],
+  de: ['App schon installiert? Apotheke hinzufügen', 'Im App-Scanner scannen'],
+  pt: ['Já tem a app? Adicione a farmácia', 'Leia no scanner da app'],
+  zh: ['已下载App？添加本药房', '请用App内扫描'],
+  ar: ['هل لديك التطبيق؟ أضف الصيدلية', 'امسح من خلال ماسح التطبيق']
+};
 const LOCALE = { it:'it-IT', en:'en-GB', fr:'fr-FR', es:'es-ES', de:'de-DE', pt:'pt-PT', zh:'zh-CN', ar:'ar', ro:'ro-RO', sq:'sq-AL' };
 let LANG = 'it';
 let langResetTimer = null;
@@ -246,6 +271,9 @@ function applyLang() {
   const q = I18N_QR[LANG] || I18N_QR.it;
   document.getElementById('qrTitle').textContent = q[0];
   document.getElementById('qrSub').textContent = q[1];
+  const qa = I18N_QR_APP[LANG] || I18N_QR_APP.it;
+  document.getElementById('qrTitleApp').textContent = qa[0];
+  document.getElementById('qrSubApp').textContent = qa[1];
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === LANG));
   updateClock();
   renderAll();
@@ -581,12 +609,19 @@ function renderAnnunci() {
 // (offline-safe, nessun servizio esterno). Se la libreria non c'è, il box resta nascosto.
 function renderQR() {
   const box = document.getElementById('qrBox');
-  if (typeof qrcode === 'undefined') { box.style.display = 'none'; return; }
+  const boxApp = document.getElementById('qrBoxApp');
+  if (typeof qrcode === 'undefined') { box.style.display = 'none'; boxApp.style.display = 'none'; return; }
   const qr = qrcode(0, 'M');
   qr.addData(FIDELITY_URL);
   qr.make();
   document.getElementById('qrImg').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
   box.style.display = '';
+  // Secondo QR: codice punto vendita per l'app del circuito.
+  const qrApp = qrcode(0, 'M');
+  qrApp.addData(PDV_CODE);
+  qrApp.make();
+  document.getElementById('qrImgApp').innerHTML = qrApp.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+  boxApp.style.display = '';
 }
 
 function renderAll() { renderToday(); renderNext(); renderMappa(); renderServizi(); renderAnnunci(); }
