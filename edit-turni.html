@@ -204,6 +204,16 @@
   <div style="padding:9px 12px;font-size:12px;color:#555;background:#f7faf8;border-bottom:1px solid #e0e8e2;">
     Comunicazioni e offerte (solo italiano). Le date sono opzionali: lascia vuoto "Dal/Al" per mostrarlo sempre. "📢 In evidenza" lo mette nel banner grande in cima alla bacheca; gli altri vanno nel riquadro Comunicazioni a destra. Fuori dall'intervallo di date sparisce da solo.
   </div>
+  <div style="padding:9px 12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:#eef6ff;border-bottom:1px solid #d6e2f5;font-size:13px;color:#333;">
+    <label style="display:flex;align-items:center;gap:6px;font-weight:700;"><input type="checkbox" id="tickerScorre" onchange="annunciDirty=true;aggiornaTickerUI();aggiornaAnnunciCount()"> 📢 Banner in evidenza scorrevole</label>
+    <label id="tickerVelLabel" style="display:flex;align-items:center;gap:6px;">Velocità
+      <select id="tickerVel" onchange="annunciDirty=true;aggiornaAnnunciCount()" style="padding:5px;border:1px solid #ccc;border-radius:6px;font-size:14px;">
+        <option value="90">Lenta</option>
+        <option value="150">Media</option>
+        <option value="220">Veloce</option>
+      </select>
+    </label>
+  </div>
   <div id="annunciEditor" style="flex:1;min-height:0;overflow:auto;padding:10px 12px;background:#f5f7f5;"></div>
   <div style="padding:10px 12px;border-top:1px solid #e0e8e2;">
     <button onclick="aggiungiAnnuncio()" style="background:#00838f;color:#fff;border:none;border-radius:6px;padding:10px 14px;font-size:14px;font-weight:700;cursor:pointer;width:100%;">+ Aggiungi annuncio</button>
@@ -779,9 +789,23 @@ function apriAnnunci() {
   ed.innerHTML = '';
   if (!lista.length) rigaAnnuncio({});
   else lista.forEach(a => rigaAnnuncio(a));
+  // Impostazioni ticker (scorrimento + velocità) dal Gist; default: scorre, velocità media.
+  const tk = CONTENUTI.ticker || {};
+  document.getElementById('tickerScorre').checked = tk.scorre !== false;
+  document.getElementById('tickerVel').value = String(tk.velocita || 150);
+  aggiornaTickerUI();
   annunciDirty = false;
   aggiornaAnnunciCount();
   document.getElementById('annunciOverlay').style.display = 'flex';
+}
+function aggiornaTickerUI() {
+  const on = document.getElementById('tickerScorre').checked;
+  document.getElementById('tickerVel').disabled = !on;
+  document.getElementById('tickerVelLabel').style.opacity = on ? '1' : '0.45';
+}
+function tickerDaEditor() {
+  return { scorre: document.getElementById('tickerScorre').checked,
+           velocita: parseInt(document.getElementById('tickerVel').value, 10) || 150 };
 }
 function chiudiAnnunci() {
   if (annunciDirty && !confirm('Hai annunci non salvati. Chiudere senza salvare?')) return;
@@ -845,6 +869,7 @@ async function salvaAnnunci() {
   btn.disabled = true; btn.textContent = '⏳';
   try {
     CONTENUTI.annunci = annunciDaEditor();   // preserva eventuali altre chiavi (servizi)
+    CONTENUTI.ticker = tickerDaEditor();     // scorrimento + velocità del banner in evidenza
     const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
       method: 'PATCH',
       headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
