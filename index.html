@@ -658,33 +658,34 @@ function renderAnnunci() {
   box.style.display = normali.length ? '' : 'none';
 }
 
-// QR per la tessera fedeltà: generato una volta sola con la libreria locale qrcode.js
-// (offline-safe, nessun servizio esterno). Se la libreria non c'è, il box resta nascosto.
+// QR generati con la libreria locale qrcode.js (offline-safe, nessun servizio esterno).
+// Solo sul kiosk: su mobile niente QR (chi è al telefono ha già tel: e i link social).
 function renderQR() {
   const box = document.getElementById('qrBox');
   const boxApp = document.getElementById('qrBoxApp');
-  if (typeof qrcode === 'undefined') { box.style.display = 'none'; boxApp.style.display = 'none'; return; }
+  const boxTurni = document.getElementById('qrBoxTurni');
+  if (isMobile() || typeof qrcode === 'undefined') {
+    box.style.display = 'none'; boxApp.style.display = 'none'; boxTurni.style.display = 'none';
+    return;
+  }
+  // QR bacheca: apre questo stesso sito sul telefono.
+  const qrTurni = qrcode(0, 'M');
+  qrTurni.addData(TURNI_URL);
+  qrTurni.make();
+  document.getElementById('qrImgTurni').innerHTML = qrTurni.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+  boxTurni.style.display = '';
+  // QR tessera fedeltà.
   const qr = qrcode(0, 'M');
   qr.addData(FIDELITY_URL);
   qr.make();
   document.getElementById('qrImg').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
   box.style.display = '';
-  // Secondo QR: codice punto vendita per l'app del circuito.
+  // QR codice punto vendita per l'app del circuito.
   const qrApp = qrcode(0, 'M');
   qrApp.addData(PDV_CODE);
   qrApp.make();
   document.getElementById('qrImgApp').innerHTML = qrApp.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
   boxApp.style.display = '';
-  // QR bacheca: solo sul kiosk (su mobile saresti già sul sito, è inutile).
-  const boxTurni = document.getElementById('qrBoxTurni');
-  if (isMobile()) { boxTurni.style.display = 'none'; }
-  else {
-    const qrTurni = qrcode(0, 'M');
-    qrTurni.addData(TURNI_URL);
-    qrTurni.make();
-    document.getElementById('qrImgTurni').innerHTML = qrTurni.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
-    boxTurni.style.display = '';
-  }
 }
 
 function renderAll() { renderToday(); renderNext(); renderMappa(); renderServizi(); renderAnnunci(); }
