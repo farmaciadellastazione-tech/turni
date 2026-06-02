@@ -38,8 +38,10 @@
   .turno-label { font-size: 10px; color: #888; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
   .turno-name { font-size: 28px; font-weight: 800; color: #1a1a1a; line-height: 1.1; }
   .turno-name.is-us { color: #2e7d4f; }
-  .conturno-block { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cfe0d4; }
-  .conturno-name { font-size: 20px; font-weight: 700; color: #1a1a1a; line-height: 1.1; }
+  /* Conturno con la STESSA grafica del turno: pari risalto, chi legge sceglie per vicinanza.
+     La differenza (turno 24h vs conturno che chiude) è solo nell'etichetta, non nel corpo. */
+  .conturno-block { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e0e8e2; }
+  .conturno-name { font-size: 28px; font-weight: 800; color: #1a1a1a; line-height: 1.1; }
   .conturno-name.is-us { color: #2e7d4f; }
   .turno-contact { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
   .contact-row { font-size: 15px; color: #333; }
@@ -297,6 +299,19 @@ const I18N_QR_TURNI = {
   zh: ['想知道哪家药房值班？', '扫码：在手机上查看本看板'],
   ar: ['تريد معرفة الصيدلية المناوبة؟', 'امسح: اللوحة على هاتفك']
 };
+// Etichette orario delle due farmacie: [turno aperto 24h, conturno "aperta fino" (+ ora)].
+const I18N_ORARIO = {
+  it: ['aperta 24h', 'aperta fino'],
+  ro: ['deschisă 24h', 'deschisă până la'],
+  sq: ['hapur 24 orë', 'hapur deri në'],
+  en: ['open 24h', 'open until'],
+  fr: ['ouverte 24h', "ouverte jusqu'à"],
+  es: ['abierta 24h', 'abierta hasta'],
+  de: ['24h geöffnet', 'geöffnet bis'],
+  pt: ['aberta 24h', 'aberta até'],
+  zh: ['24小时营业', '营业至'],
+  ar: ['مفتوحة 24 ساعة', 'مفتوحة حتى']
+};
 const LOCALE = { it:'it-IT', en:'en-GB', fr:'fr-FR', es:'es-ES', de:'de-DE', pt:'pt-PT', zh:'zh-CN', ar:'ar', ro:'ro-RO', sq:'sq-AL' };
 let LANG = 'it';
 let langResetTimer = null;
@@ -311,7 +326,7 @@ function applyLang() {
   document.body.classList.toggle('rtl', LANG === 'ar');
   document.getElementById('barOnDuty').textContent = t('onDuty');
   document.getElementById('barUpcoming').textContent = t('upcoming');
-  document.getElementById('todayLabel').textContent = t('now');
+  document.getElementById('todayLabel').textContent = t('now') + ' · ' + (I18N_ORARIO[LANG] || I18N_ORARIO.it)[0];
   document.getElementById('serviziTitle').textContent = '• ' + t('services') + ' •';
   document.getElementById('annunciTitle').textContent = '• ' + t('communications') + ' •';
   document.getElementById('orariTag').textContent = t('weekRange') + ': 08:30–19:30';
@@ -490,7 +505,7 @@ function statoConturno(key) {
   const chiusura = new Date(Y, M - 1, D, estate ? 20 : 19, estate ? 0 : 30, 0, 0);
   const now = new Date();
   const fine = estate ? '20:00' : '19:30';
-  return { aperto: now >= apertura && now <= chiusura, orario: '08:30–' + fine };
+  return { aperto: now >= apertura && now <= chiusura, orario: '08:30–' + fine, fine };
 }
 
 function renderToday() {
@@ -516,7 +531,7 @@ function renderToday() {
   if (turno.c) {
     const sc = statoConturno(key);
     if (sc.aperto) {
-      document.getElementById('conturnoLabel').textContent = t('conturno') + ' · ' + t('open') + ' ' + sc.orario;
+      document.getElementById('conturnoLabel').textContent = t('conturno') + ' · ' + (I18N_ORARIO[LANG] || I18N_ORARIO.it)[1] + ' ' + sc.fine;
       const cn = document.getElementById('conturnoName');
       cn.textContent = 'Farm. ' + turno.c;
       cn.className = 'conturno-name' + (turno.c === 'Della Stazione' ? ' is-us' : '');
