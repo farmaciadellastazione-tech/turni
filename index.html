@@ -222,7 +222,11 @@
 
 <script>
 const GIST_ID = '8f699fa0fd4566b2bbb2805b76ad482e';
+const GIST_OWNER = 'farmaciadellastazione-tech';
 const GIST_FILE = 'turni-overrides.json';
+// Letture dal Gist via URL "raw" (CDN): NON soggette al limite di 60 richieste/ora
+// dell'API GitHub. L'editor scrive invece via API col token (limite 5000/ora).
+const GIST_RAW = `https://gist.githubusercontent.com/${GIST_OWNER}/${GIST_ID}/raw`;
 
 let TURNI_BASE = {};
 let FARMACIE = {};
@@ -378,32 +382,33 @@ function isMobile() {
   return /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(navigator.userAgent || '');
 }
 
+// Scarica un singolo file del Gist via URL raw (CDN). `?t=` evita la cache per avere
+// l'ultima versione a ogni poll. Ritorna il testo, o null se il file non esiste (404).
+async function fetchGistRaw(nome) {
+  const r = await fetch(`${GIST_RAW}/${nome}?t=${Date.now()}`, { cache: 'no-store' });
+  if (!r.ok) { if (r.status === 404) return null; throw new Error('HTTP ' + r.status); }
+  return await r.text();
+}
 async function loadOverrides() {
   try {
-    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-      headers: { 'Accept': 'application/vnd.github.v3+json' },
-      cache: 'no-store'
-    });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const data = await r.json();
+    // Letture in parallelo dagli URL raw (no limite API). Un file mancante => null.
+    const [baseTxt, ovTxt, posTxt, contTxt, anagTxt] = await Promise.all([
+      fetchGistRaw('turni-base.json'),
+      fetchGistRaw(GIST_FILE),
+      fetchGistRaw('farmacie-pos.json'),
+      fetchGistRaw('contenuti.json'),
+      fetchGistRaw('farmacie.json'),
+    ]);
     // Base dal Gist (se presente): ha la precedenza sul seed locale del repo
-    const bf = data.files['turni-base.json'];
-    if (bf && bf.content) {
-      const b = JSON.parse(bf.content);
-      if (b && Object.keys(b).length) TURNI_BASE = b;
-    }
-    const content = data.files[GIST_FILE].content;
-    overrides = JSON.parse(content).overrides || {};
-    const pf = data.files['farmacie-pos.json'];
-    POSIZIONI = (pf && pf.content) ? (JSON.parse(pf.content) || {}) : {};
-    const cf = data.files['contenuti.json'];
-    CONTENUTI = (cf && cf.content) ? (JSON.parse(cf.content) || {}) : {};
+    if (baseTxt) { try { const b = JSON.parse(baseTxt); if (b && Object.keys(b).length) TURNI_BASE = b; } catch(e) {} }
+    overrides = ovTxt ? (JSON.parse(ovTxt).overrides || {}) : {};
+    POSIZIONI = posTxt ? (JSON.parse(posTxt) || {}) : {};
+    CONTENUTI = contTxt ? (JSON.parse(contTxt) || {}) : {};
     // Rete di sicurezza: se l'anagrafica locale (data/farmacie.json) non si è caricata
     // (es. pagina aperta come file://, o offline), usa la copia pubblicata sul Gist.
     // Solo fallback: se il file locale c'è, vince lui (resta la fonte di verità nel repo).
-    const af = data.files['farmacie.json'];
-    if (af && af.content && !Object.keys(FARMACIE).length) {
-      try { const g = JSON.parse(af.content); if (g && Object.keys(g).length) FARMACIE = g; } catch(e) {}
+    if (anagTxt && !Object.keys(FARMACIE).length) {
+      try { const g = JSON.parse(anagTxt); if (g && Object.keys(g).length) FARMACIE = g; } catch(e) {}
     }
     document.getElementById('syncDot').className = 'sync-dot';
     document.getElementById('syncText').textContent = t('updated') + ' ' + new Date().toLocaleTimeString(LOCALE[LANG], {hour:'2-digit',minute:'2-digit'});
