@@ -104,11 +104,17 @@
   .social-icon.fb { background: #1877f2; }
   .social-icon.ig { background: linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888); }
   .social-icon svg { width: 13px; height: 13px; fill: #fff; }
-  .qr-box { background: #fff; border-top: 2px solid #2e7d4f; padding: 7px 12px; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-  .qr-box .qr-img { width: 84px; height: 84px; flex-shrink: 0; }
+  /* I 3 QR affiancati in un'unica riga: pensato per il totem orizzontale (schermo largo
+     e basso), dove impilarli verticalmente tagliava l'ultimo. Ogni box è 1/3 di larghezza,
+     col QR sopra e i testi sotto, centrati. Mostrati solo sul kiosk (renderQR). */
+  .qr-row { display: flex; border-top: 2px solid #2e7d4f; flex-shrink: 0; }
+  .qr-box { background: #fff; padding: 8px 10px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; flex: 1; min-width: 0; }
+  .qr-box + .qr-box { border-left: 1px solid #dde8e0; }
+  .qr-box .qr-img { width: 76px; height: 76px; flex-shrink: 0; }
   .qr-box .qr-img svg { width: 100%; height: 100%; display: block; }
-  .qr-text .qr-title { font-weight: 800; font-size: 15px; color: #2e7d4f; line-height: 1.15; }
-  .qr-text .qr-sub { font-size: 12px; color: #555; margin-top: 3px; }
+  .qr-text { min-width: 0; }
+  .qr-text .qr-title { font-weight: 800; font-size: 12px; color: #2e7d4f; line-height: 1.15; }
+  .qr-text .qr-sub { font-size: 10px; color: #555; margin-top: 2px; }
   .footer { background: #1a1a1a; color: #aaa; font-size: 10px; padding: 5px 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
   .sync-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #4caf50; margin-right: 5px; vertical-align: middle; }
   .sync-dot.err { background: #f44336; }
@@ -199,30 +205,33 @@
         <div class="annunci-box-title" id="annunciTitle">• Comunicazioni •</div>
         <div id="annunciList"></div>
       </div>
-      <!-- QR bacheca: apre questo stesso sito sul telefono (installabile come PWA).
-           Nascosto su mobile (renderQR): chi è già sul telefono non ne ha bisogno. -->
-      <div class="qr-box" id="qrBoxTurni" style="display:none">
-        <div class="qr-img" id="qrImgTurni"></div>
-        <div class="qr-text">
-          <div class="qr-title" id="qrTitleTurni">Vuoi sapere quale farmacia è di turno?</div>
-          <div class="qr-sub" id="qrSubTurni">Inquadra: la bacheca sul tuo telefono</div>
+      <!-- I 3 QR in un'unica riga (vedi .qr-row nel CSS). Tutta la riga è nascosta su
+           mobile da renderQR: chi è già al telefono non ne ha bisogno. -->
+      <div class="qr-row" id="qrRow" style="display:none">
+        <!-- QR bacheca: apre questo stesso sito sul telefono (installabile come PWA). -->
+        <div class="qr-box" id="qrBoxTurni">
+          <div class="qr-img" id="qrImgTurni"></div>
+          <div class="qr-text">
+            <div class="qr-title" id="qrTitleTurni">Vuoi sapere quale farmacia è di turno?</div>
+            <div class="qr-sub" id="qrSubTurni">Inquadra: la bacheca sul tuo telefono</div>
+          </div>
         </div>
-      </div>
-      <div class="qr-box" id="qrBox" style="display:none">
-        <div class="qr-img" id="qrImg"></div>
-        <div class="qr-text">
-          <div class="qr-title" id="qrTitle">Fatti la tessera fedeltà</div>
-          <div class="qr-sub" id="qrSub">Inquadra il QR · è gratis</div>
+        <div class="qr-box" id="qrBox">
+          <div class="qr-img" id="qrImg"></div>
+          <div class="qr-text">
+            <div class="qr-title" id="qrTitle">Fatti la tessera fedeltà</div>
+            <div class="qr-sub" id="qrSub">Inquadra il QR · è gratis</div>
+          </div>
         </div>
-      </div>
-      <!-- Secondo QR: codice punto vendita (@PDV@...). Va inquadrato dallo scanner
-           DENTRO l'app del circuito, non dalla fotocamera. Serve a chi ha già l'app
-           per agganciare la Farmacia della Stazione. -->
-      <div class="qr-box" id="qrBoxApp" style="display:none">
-        <div class="qr-img" id="qrImgApp"></div>
-        <div class="qr-text">
-          <div class="qr-title" id="qrTitleApp">Hai già l’app? Aggiungi la farmacia</div>
-          <div class="qr-sub" id="qrSubApp">Scansiona dallo scanner dell’app</div>
+        <!-- QR codice punto vendita (@PDV@...). Va inquadrato dallo scanner DENTRO l'app
+             del circuito, non dalla fotocamera. Serve a chi ha già l'app per agganciare
+             la Farmacia della Stazione. -->
+        <div class="qr-box" id="qrBoxApp">
+          <div class="qr-img" id="qrImgApp"></div>
+          <div class="qr-text">
+            <div class="qr-title" id="qrTitleApp">Hai già l’app? Aggiungi la farmacia</div>
+            <div class="qr-sub" id="qrSubApp">Scansiona dallo scanner dell’app</div>
+          </div>
         </div>
       </div>
     </div>
@@ -742,11 +751,10 @@ function renderAnnunci() {
 // QR generati con la libreria locale qrcode.js (offline-safe, nessun servizio esterno).
 // Solo sul kiosk: su mobile niente QR (chi è al telefono ha già tel: e i link social).
 function renderQR() {
-  const box = document.getElementById('qrBox');
-  const boxApp = document.getElementById('qrBoxApp');
-  const boxTurni = document.getElementById('qrBoxTurni');
+  // La riga contiene tutti e 3 i QR: si mostra/nasconde in blocco.
+  const row = document.getElementById('qrRow');
   if (isMobile() || typeof qrcode === 'undefined') {
-    box.style.display = 'none'; boxApp.style.display = 'none'; boxTurni.style.display = 'none';
+    row.style.display = 'none';
     return;
   }
   // QR bacheca: apre questo stesso sito sul telefono.
@@ -754,19 +762,17 @@ function renderQR() {
   qrTurni.addData(TURNI_URL);
   qrTurni.make();
   document.getElementById('qrImgTurni').innerHTML = qrTurni.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
-  boxTurni.style.display = '';
   // QR tessera fedeltà.
   const qr = qrcode(0, 'M');
   qr.addData(FIDELITY_URL);
   qr.make();
   document.getElementById('qrImg').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
-  box.style.display = '';
   // QR codice punto vendita per l'app del circuito.
   const qrApp = qrcode(0, 'M');
   qrApp.addData(PDV_CODE);
   qrApp.make();
   document.getElementById('qrImgApp').innerHTML = qrApp.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
-  boxApp.style.display = '';
+  row.style.display = 'flex';
 }
 
 function renderAll() { renderToday(); renderNext(); renderMappa(); renderServizi(); renderAnnunci(); }
