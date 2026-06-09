@@ -1,0 +1,22 @@
+{
+  "servizi": [
+    "Holter ECG",
+    "Holter Pressorio",
+    "Elettrocardiogramma",
+    "Misurazione PA",
+    "Analisi del sangue",
+    "CUP"
+  ],
+  "annunci": [
+    {
+      "testo": "Giornata Helan  Venerdì 12 Giugno",
+      "da": "2026-06-02",
+      "a": "2026-06-12",
+      "evidenza": true
+    }
+  ],
+  "ticker": {
+    "scorre": true,
+    "velocita": 220
+  }
+}

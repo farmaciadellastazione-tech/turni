@@ -1,0 +1,55 @@
+# Backup automatico dei dati del Gist nel repo.
+# Gira nel cloud (non serve PC/totem acceso), legge i raw URL pubblici del Gist
+# (nessun token necessario) e ricommitta lo snapshot in backup/gist SOLO se e'
+# cambiato qualcosa. Lo storico delle versioni e' tenuto da git.
+name: Snapshot Gist
+
+on:
+  schedule:
+    - cron: "0 4 * * *"   # ogni giorno alle 04:00 UTC (~06:00 in Italia d'estate)
+  workflow_dispatch: {}    # consente anche l'avvio manuale dal tab "Actions"
+
+permissions:
+  contents: write          # serve per ricommittare lo snapshot
+
+concurrency:
+  group: snapshot-gist
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scarica i file del Gist
+        run: |
+          GIST="https://gist.githubusercontent.com/farmaciadellastazione-tech/8f699fa0fd4566b2bbb2805b76ad482e/raw"
+          mkdir -p backup/gist
+          for f in turni-base.json turni-overrides.json farmacie-pos.json contenuti.json farmacie.json; do
+            if curl -fsSL "$GIST/$f?t=$(date +%s)" -o "backup/gist/$f.tmp"; then
+              # Indenta il JSON se valido (diff minimi), altrimenti tiene il grezzo.
+              if jq . "backup/gist/$f.tmp" > "backup/gist/$f.new" 2>/dev/null; then
+                mv "backup/gist/$f.new" "backup/gist/$f"
+              else
+                mv "backup/gist/$f.tmp" "backup/gist/$f"
+              fi
+              rm -f "backup/gist/$f.tmp" "backup/gist/$f.new"
+              echo "ok $f"
+            else
+              echo "assente $f (saltato)"
+              rm -f "backup/gist/$f.tmp"
+            fi
+          done
+
+      - name: Commit se cambiato
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backup/gist
+          if git diff --cached --quiet; then
+            echo "Nessuna modifica: snapshot gia' aggiornato."
+          else
+            git commit -m "Backup: aggiornamento automatico snapshot Gist ($(date -u +%Y-%m-%d))"
+            git push
+          fi
