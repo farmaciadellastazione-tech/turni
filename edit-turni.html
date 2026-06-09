@@ -86,6 +86,9 @@
   <button style="background:#6a1b9a;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
     onclick="document.getElementById('pdfBollettino').click()">📋 Importa bollettino settimanale (PDF)</button>
   <input type="file" id="pdfBollettino" accept="application/pdf" style="display:none" onchange="importaBollettino(this.files[0])">
+  <button style="background:#5d4037;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
+    onclick="document.getElementById('pdfSabato').click()">🗓 Importa sabato pomeriggio (PDF)</button>
+  <input type="file" id="pdfSabato" accept="application/pdf" style="display:none" onchange="importaSabato(this.files[0])">
   <button style="background:#00695c;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
     onclick="apriPosizioni()">📍 Posizioni farmacie</button>
   <button style="background:#00838f;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
@@ -94,8 +97,6 @@
     onclick="apriAnnunci()">📢 Annunci</button>
   <button style="background:#c2185b;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
     onclick="apriPubblicita()">📺 Pubblicità</button>
-  <button style="background:#5d4037;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
-    onclick="apriSabato()">🗓 Sabato pom.</button>
   <button id="anagBtn" style="background:#455a64;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
     onclick="pubblicaAnagrafica()" title="Copia data/farmacie.json sul Gist come rete di sicurezza">🗂 Pubblica anagrafica</button>
 </div>
@@ -249,36 +250,6 @@
   </div>
 </div>
 
-<!-- PANNELLO SABATO POMERIGGIO (farmacie a orario continuato, mostrate sulla bacheca il sab. pom.) -->
-<div id="sabOverlay" style="display:none;position:fixed;inset:0;z-index:300;background:#fff;flex-direction:column;">
-  <div class="topbar">
-    <div>
-      <div class="topbar-title">🗓 Sabato pomeriggio</div>
-      <div class="topbar-sub" id="sabCount">—</div>
-    </div>
-    <div style="display:flex;gap:6px;">
-      <button class="save-btn" id="sabSaveBtn" onclick="salvaSabato()">💾 Salva</button>
-      <button class="save-btn" style="background:#e0e0e0;color:#333;" onclick="chiudiSabato()">✕ Chiudi</button>
-    </div>
-  </div>
-  <div style="padding:9px 12px;font-size:12px;color:#555;background:#f7faf8;border-bottom:1px solid #e0e8e2;">
-    Incolla qui il testo del documento "FARMACIE APERTE SABATO POMERIGGIO" (aprilo dal Drive e copia tutto), poi premi <b>Riconosci</b>. Controlla data ed elenco — puoi correggerli a mano — e Salva. La bacheca lo mostra solo il sabato dalle 13:00 alle 20:00, al posto dei "Prossimi turni".
-  </div>
-  <div style="padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:#f5f7f5;flex:1;min-height:0;overflow:auto;">
-    <textarea id="sabPaste" rows="5" placeholder="Incolla qui il testo del documento del sabato pomeriggio…"
-      style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:14px;font-family:inherit;resize:vertical;"></textarea>
-    <button onclick="riconosciSabato()" style="background:#5d4037;color:#fff;border:none;border-radius:6px;padding:9px 14px;font-size:14px;font-weight:700;cursor:pointer;align-self:flex-start;">🔎 Riconosci</button>
-    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;">
-      <label style="font-size:13px;color:#555;">Sabato del <input type="date" id="sabData" oninput="sabatoDirty=true;aggiornaSabCount()" style="padding:6px;border:1px solid #ccc;border-radius:6px;font-size:14px;"></label>
-      <label style="font-size:13px;color:#555;">Orario <input type="text" id="sabOrario" value="15:30–19:30" oninput="sabatoDirty=true" style="width:120px;padding:6px;border:1px solid #ccc;border-radius:6px;font-size:14px;"></label>
-    </div>
-    <label style="font-size:13px;color:#555;">Farmacie aperte (una per riga)</label>
-    <textarea id="sabFarmacie" rows="12" oninput="sabatoDirty=true;aggiornaSabCount()" placeholder="Una farmacia per riga (nome come in anagrafica)"
-      style="width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:15px;font-family:inherit;resize:vertical;"></textarea>
-    <div id="sabSalvati" style="font-size:12px;color:#777;"></div>
-  </div>
-</div>
-
 <script>
 const GIST_ID = '8f699fa0fd4566b2bbb2805b76ad482e';
 const GIST_FILE = 'turni-overrides.json';
@@ -316,7 +287,6 @@ let CONTENUTI = {};
 let serviziDirty = false;
 let annunciDirty = false;
 let pubblicitaDirty = false;
-let sabatoDirty = false;
 let SABATO_GIST = {};          // sabato.json dal Gist: { 'YYYY-MM-DD': { orario, farmacie:[] } }
 
 function toKey(d) {
@@ -679,7 +649,7 @@ function resetDay() {
 
 // Avvisa se si chiude/ricarica con modifiche non salvate
 window.addEventListener('beforeunload', (e) => {
-  if (dirty || posDirty || serviziDirty || annunciDirty || pubblicitaDirty || sabatoDirty || modalHasChanges()) { e.preventDefault(); e.returnValue = ''; }
+  if (dirty || posDirty || serviziDirty || annunciDirty || pubblicitaDirty || modalHasChanges()) { e.preventDefault(); e.returnValue = ''; }
 });
 
 // --- Posizioni farmacie sulla mappa (salvate sul Gist: farmacie-pos.json) ---
@@ -1111,81 +1081,34 @@ async function salvaPubblicita() {
   btn.disabled = false; btn.textContent = '💾 Salva';
 }
 
-// --- Sabato pomeriggio (farmacie a orario continuato dal documento dell'Ordine,
-// salvate sul Gist: sabato.json -> { 'YYYY-MM-DD': { orario, farmacie:[] } }) ---
+// --- Sabato pomeriggio (farmacie a orario continuato dal documento dell'Ordine) ---
+// Stesso flusso dell'import bollettino: PDF -> parser condiviso -> anteprima -> salvataggio.
+// A differenza del bollettino (che va negli override e si pubblica con 💾 Salva), questo
+// finisce sul file separato sabato.json e viene salvato subito, come l'import annuale.
 function oggiKey() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
-function apriSabato() {
-  document.getElementById('sabPaste').value = '';
-  // Punto di partenza: la prima voce futura già salvata (o l'ultima in assoluto), così
-  // si può ritoccare invece di ripartire da zero.
-  const chiavi = Object.keys(SABATO_GIST).sort();
-  const oggi = oggiKey();
-  const corrente = chiavi.filter(k => k >= oggi)[0] || chiavi[chiavi.length - 1];
-  if (corrente && SABATO_GIST[corrente]) {
-    document.getElementById('sabData').value = corrente;
-    document.getElementById('sabOrario').value = SABATO_GIST[corrente].orario || '15:30–19:30';
-    document.getElementById('sabFarmacie').value = (SABATO_GIST[corrente].farmacie || []).join('\n');
-  } else {
-    document.getElementById('sabData').value = '';
-    document.getElementById('sabOrario').value = '15:30–19:30';
-    document.getElementById('sabFarmacie').value = '';
-  }
-  sabatoDirty = false;
-  aggiornaSabSalvati();
-  aggiornaSabCount();
-  document.getElementById('sabOverlay').style.display = 'flex';
-}
-function chiudiSabato() {
-  if (sabatoDirty && !confirm('Hai modifiche al sabato pomeriggio non salvate. Chiudere senza salvare?')) return;
-  document.getElementById('sabOverlay').style.display = 'none';
-}
-function riconosciSabato() {
-  const txt = document.getElementById('sabPaste').value.trim();
-  if (!txt) { alert('Incolla prima il testo del documento.'); return; }
-  const r = TurniParser.parseSabatoPomeriggio(txt);
-  if (r.data) document.getElementById('sabData').value = r.data;
-  document.getElementById('sabOrario').value = r.orario || '15:30–19:30';
-  document.getElementById('sabFarmacie').value = r.farmacie.join('\n');
-  sabatoDirty = true;
-  aggiornaSabCount();
-  const avvisi = [];
-  if (!r.data) avvisi.push('⚠ Data non riconosciuta: inseriscila a mano.');
-  if (!r.farmacie.length) avvisi.push('⚠ Nessuna farmacia riconosciuta: controlla il testo incollato.');
-  alert((avvisi.length ? avvisi.join('\n') + '\n\n' : '') + `Riconosciute ${r.farmacie.length} farmacie. Controlla data ed elenco, poi Salva.`);
-}
-function sabFarmacieDaTextarea() {
-  return document.getElementById('sabFarmacie').value.split('\n').map(s => s.trim()).filter(Boolean);
-}
-function aggiornaSabCount() {
-  const n = sabFarmacieDaTextarea().length;
-  const d = document.getElementById('sabData').value;
-  document.getElementById('sabCount').textContent =
-    `${d || 'data?'} · ${n} farmaci${n === 1 ? 'a' : 'e'}${sabatoDirty ? ' · NON salvate' : ''}`;
-}
-function aggiornaSabSalvati() {
-  const chiavi = Object.keys(SABATO_GIST).sort();
-  document.getElementById('sabSalvati').textContent =
-    chiavi.length ? 'Già sul Gist: ' + chiavi.join(', ') : 'Nessun sabato salvato sul Gist.';
-}
-async function salvaSabato() {
-  const token = getToken();
-  if (!token) { alert('Inserisci prima il GitHub Token (campo in alto nell\'editor).'); return; }
-  const data = document.getElementById('sabData').value;
-  if (!data) { alert('Manca la data del sabato.'); return; }
-  const farmacie = sabFarmacieDaTextarea();
-  if (!farmacie.length) { alert('Nessuna farmacia: aggiungine almeno una.'); return; }
-  const btn = document.getElementById('sabSaveBtn');
-  btn.disabled = true; btn.textContent = '⏳';
+async function importaSabato(file) {
+  if (!file) return;
+  setStatus('Lettura del documento sabato pomeriggio...', false);
   try {
-    // Parte dalle voci già sul Gist, scarta i sabati passati (non servono più) e
-    // aggiunge/aggiorna quello corrente.
+    const text = await estraiTestoPDF(file);
+    const { data, orario, farmacie, problemi } = TurniParser.parseSabatoPomeriggio(text);
+    if (!data) { setStatus('⚠ Data non trovata nel documento (manca "<giorno> <mese> <anno>"). Controlla di aver scelto il file giusto.', true); return; }
+    if (!farmacie.length) { setStatus('⚠ Nessuna farmacia riconosciuta nel documento.', true); return; }
+    if (problemi.length) console.warn('Sabato pomeriggio — avvisi:', problemi);
+    const token = getToken();
+    if (!token) { setStatus(`✓ Documento letto: sabato ${data}, ${farmacie.length} farmacie. Inserisci il GitHub Token per salvare sul Gist.`, false); return; }
+    if (!confirm(`Sabato ${data} (${orario}): riconosciute ${farmacie.length} farmacie.\n\n${farmacie.join(', ')}\n\nSalvare sul Gist? (la bacheca lo mostrerà il sabato pomeriggio)`)) {
+      setStatus('Import sabato annullato.', false); return;
+    }
+    // Parte dalle voci esistenti, scarta i sabati passati (non servono più), aggiunge/aggiorna questo.
     const oggi = oggiKey();
     const nuovo = {};
     for (const k of Object.keys(SABATO_GIST)) if (k >= oggi) nuovo[k] = SABATO_GIST[k];
-    nuovo[data] = { orario: document.getElementById('sabOrario').value.trim() || '15:30–19:30', farmacie };
+    nuovo[data] = { orario, farmacie };
+    setStatus('Salvataggio sabato sul Gist...', false);
     const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
       method: 'PATCH',
       headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
@@ -1193,13 +1116,13 @@ async function salvaSabato() {
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     SABATO_GIST = nuovo;
-    sabatoDirty = false;
-    aggiornaSabSalvati(); aggiornaSabCount();
-    alert('✓ Sabato salvato sul Gist. La bacheca lo userà entro 5 minuti.');
+    setStatus(`✓ Sabato ${data} salvato (${farmacie.length} farmacie). La bacheca si aggiornerà entro 5 minuti.`, false);
   } catch (e) {
-    alert('⚠ Errore salvataggio: ' + e.message);
+    setStatus('⚠ Errore import sabato: ' + e.message, true);
+  } finally {
+    const inp = document.getElementById('pdfSabato');
+    if (inp) inp.value = '';
   }
-  btn.disabled = false; btn.textContent = '💾 Salva';
 }
 
 // Init
