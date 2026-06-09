@@ -118,6 +118,14 @@
   .footer { background: #1a1a1a; color: #aaa; font-size: 10px; padding: 5px 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
   .sync-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #4caf50; margin-right: 5px; vertical-align: middle; }
   .sync-dot.err { background: #f44336; }
+  /* Spot pubblicitario a tutto schermo: overlay che compare ogni tot secondi e si richiude
+     da solo (intervallo/durata dal Gist contenuti.json -> pubblicita). Solo sul kiosk
+     (vedi pianificaSpot/isMobile): sui telefoni non interrompe chi consulta i turni.
+     Tap/click per chiuderlo in anticipo. */
+  .spot-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: #000; opacity: 0; visibility: hidden; transition: opacity .45s ease; cursor: pointer; }
+  .spot-overlay.visibile { opacity: 1; visibility: visible; }
+  .spot-img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+  .spot-testo { font-family: 'Segoe UI', Arial, sans-serif; font-weight: 800; font-size: 6vw; line-height: 1.2; text-align: center; padding: 5vw; }
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2e7d4f">
@@ -243,6 +251,10 @@
     <span id="footerClock">—</span>
   </div>
 </div>
+
+<!-- Spot pubblicitario a tutto schermo (vedi .spot-overlay). Mostrato solo sul kiosk;
+     tap/click per chiuderlo in anticipo. -->
+<div class="spot-overlay" id="spotOverlay" onclick="chiudiSpotManuale()"></div>
 
 <script>
 const GIST_ID = '8f699fa0fd4566b2bbb2805b76ad482e';
@@ -775,6 +787,63 @@ function renderQR() {
   row.style.display = 'flex';
 }
 
+// --- Spot pubblicitario a tutto schermo ---
+// Ogni `intervalloSec` compare un overlay a tutto schermo per `durataSec`, poi si richiude
+// da solo; le slide (immagine o testo) ruotano a ciclo. Tutto editabile dal Gist
+// (contenuti.json -> pubblicita). Solo sul kiosk: su mobile non interrompe la consultazione.
+let spotIdx = 0;
+let spotTimer = null;
+function spotConfig() {
+  const p = (CONTENUTI && CONTENUTI.pubblicita) || {};
+  return {
+    intervallo: Math.max(15, +p.intervalloSec || 120) * 1000,
+    durata: Math.max(2, +p.durataSec || 8) * 1000,
+  };
+}
+// Slide valide oggi: immagine con `img` o testo non vuoto, dentro l'eventuale finestra [da, a].
+function spotSlideAttive() {
+  const oggi = toKey(new Date());
+  const p = (CONTENUTI && CONTENUTI.pubblicita) || {};
+  const lista = Array.isArray(p.slide) ? p.slide : [];
+  return lista.filter(s => s
+    && (s.tipo === 'immagine' ? (s.img || '').trim() : (s.testo || '').trim())
+    && (!s.da || s.da <= oggi) && (!s.a || oggi <= s.a));
+}
+function renderSpot(s) {
+  const ov = document.getElementById('spotOverlay');
+  ov.innerHTML = '';
+  if (s.tipo === 'immagine' && s.img) {
+    ov.style.background = '#000';
+    const img = document.createElement('img');
+    img.className = 'spot-img';
+    img.src = s.img;
+    ov.appendChild(img);
+  } else {
+    ov.style.background = s.sfondo || '#2e7d4f';
+    const div = document.createElement('div');
+    div.className = 'spot-testo';
+    div.style.color = s.colore || '#ffffff';
+    div.textContent = s.testo || '';
+    ov.appendChild(div);
+  }
+}
+function nascondiSpot() { document.getElementById('spotOverlay').classList.remove('visibile'); }
+function mostraSpot() {
+  const slide = spotSlideAttive();
+  if (!slide.length) { pianificaSpot(); return; }   // niente da mostrare: riprova al prossimo giro
+  renderSpot(slide[spotIdx++ % slide.length]);
+  document.getElementById('spotOverlay').classList.add('visibile');
+  clearTimeout(spotTimer);
+  spotTimer = setTimeout(() => { nascondiSpot(); pianificaSpot(); }, spotConfig().durata);
+}
+function pianificaSpot() {
+  clearTimeout(spotTimer);
+  if (isMobile()) return;                            // niente spot sul telefono
+  spotTimer = setTimeout(mostraSpot, spotConfig().intervallo);
+}
+// Tap/click sull'overlay: chiude subito e fa ripartire l'intervallo.
+function chiudiSpotManuale() { clearTimeout(spotTimer); nascondiSpot(); pianificaSpot(); }
+
 function renderAll() { renderToday(); renderNext(); renderMappa(); renderServizi(); renderAnnunci(); }
 
 function scheduleReload() {
@@ -810,6 +879,7 @@ async function init() {
   updateClock();
   await Promise.all([loadBase(), loadFarmacie()]);
   await loadOverrides();
+  pianificaSpot(); // avvia lo spot a tutto schermo (solo sul kiosk; legge il Gist a ogni giro)
   versioneIniziale = await timbroVersione(); // baseline per rilevare nuove pubblicazioni
 }
 init();
