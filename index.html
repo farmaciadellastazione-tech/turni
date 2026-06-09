@@ -785,6 +785,23 @@ function scheduleReload() {
   setTimeout(() => location.reload(), next2 - now);
 }
 
+// Auto-aggiornamento del CODICE (HTML/CSS/JS): il totem si ricarica da solo appena viene
+// pubblicata una nuova versione su GitHub Pages, senza reload a vuoto. Confronta l'ETag
+// (o Last-Modified) di questa pagina con quello di partenza; se cambia, ricarica. Sul
+// server dev locale questi header non ci sono (timbro null) → nessun reload automatico.
+let versioneIniziale = null;
+async function timbroVersione() {
+  try {
+    const r = await fetch(location.href.split('#')[0].split('?')[0], { method: 'HEAD', cache: 'no-store' });
+    return r.headers.get('etag') || r.headers.get('last-modified');
+  } catch (e) { return null; }
+}
+async function controllaAggiornamentoCodice() {
+  const t = await timbroVersione();
+  if (!t || versioneIniziale === null) return; // header assente o baseline non ancora presa
+  if (t !== versioneIniziale) location.reload();
+}
+
 async function init() {
   // Su cellulare riprende l'ultima lingua scelta; sul kiosk parte sempre da italiano.
   try { const s = localStorage.getItem('bacheca_lang'); if (isMobile() && s && I18N[s]) LANG = s; } catch(e) {}
@@ -793,11 +810,13 @@ async function init() {
   updateClock();
   await Promise.all([loadBase(), loadFarmacie()]);
   await loadOverrides();
+  versioneIniziale = await timbroVersione(); // baseline per rilevare nuove pubblicazioni
 }
 init();
 setInterval(() => { updateClock(); renderToday(); renderMappa(); }, 30000); // aggiorna turno/conturno/mappa (es. chiusura conturno alle 19:30)
 setInterval(loadOverrides, 5 * 60 * 1000); // rilegge Gist ogni 5 min
-scheduleReload();
+setInterval(controllaAggiornamentoCodice, 60 * 1000); // ricarica appena esce una nuova versione del codice
+scheduleReload(); // reload di sicurezza alle 02:00 (fallback se l'ETag non e' disponibile)
 </script>
 </body>
 </html>
