@@ -171,5 +171,58 @@
     return { turni, problemi, sconosciuti };
   }
 
-  return { CANON, parseAnnualText, parseBulletin };
+  // --- Documento "FARMACIE APERTE SABATO POMERIGGIO" (Ordine Provinciale) ---
+  // Word/PDF con: data ("20 GIUGNO 2026"), "ORARIO MINIMO 15.30 - 19.30" e l'elenco
+  // dei nomi delle farmacie aperte (cella separata dagli indirizzi). Qui "Di Marola" e
+  // "Maimone" sono due farmacie distinte (non il turno composto), come in farmacie.json.
+  const SAB_ALIAS = Object.assign({}, CANON, {
+    'DI MAROLA': 'Di Marola',
+    'MAIMONE': 'Maimone',
+  });
+  // Match goloso (3,2,1 token) di un nome a partire dall'indice i, ripulendo il token
+  // da numeri/punteggiatura di servizio.
+  function matchSab(tokens, i) {
+    for (const len of [3, 2, 1]) {
+      if (i + len > tokens.length) continue;
+      const key = tokens.slice(i, i + len).join(' ').toUpperCase().replace(/[^A-Z'./ ]/g, '').trim();
+      if (SAB_ALIAS[key]) return { name: SAB_ALIAS[key], used: len };
+    }
+    return null;
+  }
+  // Estrae { data:'YYYY-MM-DD'|null, orario:'HH:MM–HH:MM', farmacie:[nomi], problemi:[] }.
+  // I nomi si raccolgono dal PRIMO blocco contiguo di farmacie riconosciute e ci si ferma
+  // al primo token non-nome: così gli indirizzi (che possono contenere parole-farmacia
+  // come "MIGLIARINA") restano fuori dall'elenco.
+  function parseSabatoPomeriggio(rawText) {
+    const txt = ' ' + String(rawText).replace(/’/g, "'").replace(/\|/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+    const problemi = [];
+
+    let data = null;
+    const dm = txt.match(new RegExp('(\\d{1,2})\\s+(' + MESI.join('|') + ')\\s+(\\d{4})', 'i'));
+    if (dm) {
+      data = dm[3] + '-' + String(NUM_MESE[dm[2].toUpperCase()]).padStart(2, '0') + '-' + String(parseInt(dm[1], 10)).padStart(2, '0');
+    } else {
+      problemi.push('data non riconosciuta');
+    }
+
+    let orario = '15:30–19:30';
+    const om = txt.match(/ORARIO\s+MINIMO\s+(\d{1,2})[.,:](\d{2})\s*[-–]\s*(\d{1,2})[.,:](\d{2})/i);
+    if (om) orario = om[1].padStart(2, '0') + ':' + om[2] + '–' + om[3].padStart(2, '0') + ':' + om[4];
+
+    const toks = txt.trim().split(/\s+/);
+    let i = 0;
+    while (i < toks.length && !matchSab(toks, i)) i++;   // salta intestazione, data, orario
+    const farmacie = [];
+    while (i < toks.length) {                              // raccogli il blocco nomi
+      const m = matchSab(toks, i);
+      if (!m) break;                                       // primo indirizzo: stop
+      if (!farmacie.includes(m.name)) farmacie.push(m.name);
+      i += m.used;
+    }
+    if (!farmacie.length) problemi.push('nessuna farmacia riconosciuta');
+
+    return { data, orario, farmacie, problemi };
+  }
+
+  return { CANON, parseAnnualText, parseBulletin, parseSabatoPomeriggio };
 });

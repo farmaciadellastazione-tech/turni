@@ -16,7 +16,7 @@ Italian-language static web app for **Farmacia della Stazione** (La Spezia): a d
 
 - `index.html` — **bacheca pubblica** (read-only). Shows the pharmacy on duty now, upcoming turni, clock, map, services, contacts. Auto-refreshes. Reads data over HTTP, so it must be served (not opened as `file://`).
 - `edit-turni.html` — **editor** (mobile-friendly). Day-by-day calendar to edit turno, conturno (the `c` field), end time, extraordinary openings, notes. Writes to a GitHub Gist via the GitHub API (needs a PAT with `gist` scope, pasted into the field, kept in `localStorage`). Also imports PDFs (see below).
-- `turni-parser.js` — **shared parser** (UMD: `require` in Node, `<script src>` in the browser). Exposes `parseAnnualText(text, anno)`, `parseBulletin(text)`, and `CANON`. Used by both the editor and the CLI generator.
+- `turni-parser.js` — **shared parser** (UMD: `require` in Node, `<script src>` in the browser). Exposes `parseAnnualText(text, anno)`, `parseBulletin(text)`, `parseSabatoPomeriggio(text)`, and `CANON`. Used by both the editor and the CLI generator. `parseSabatoPomeriggio` legge il documento "FARMACIE APERTE SABATO POMERIGGIO" dell'Ordine (Word/PDF, fonte separata dal bollettino settimanale): estrae data + orario + elenco nomi, raccogliendo **solo** il blocco iniziale di farmacie e fermandosi al primo indirizzo (così parole-via come "MIGLIARINA" non finiscono tra le aperte). Qui "Di Marola" e "Maimone" sono due farmacie distinte. Fixture: `data/esempio-sabato-*.txt`.
 - `data/turni-<anno>.json` — calendar base, one record per day (`{t, c?}`), generated from the official PDF. The pages load *previous / current / next* year.
 - `data/farmacie.json` — anagrafica: `{ indirizzo, telefono, zona? }` per pharmacy, keyed by the display name used in the turni data.
 - `data/sorgente-turni-<anno>.txt` — text of the official annual PDF (historical source).
@@ -31,6 +31,10 @@ data/turni-<anno>.json (base)  +  overrides (Gist)  =  turno mostrato
 
 - **Base**: versioned `data/turni-<anno>.json`. Can be overridden remotely by a `turni-base.json` file on the Gist (if present, it wins) — that is how the editor's annual import publishes a new year without touching the repo.
 - **Overrides/eccezioni**: a public **GitHub Gist** (ID `8f699fa0fd4566b2bbb2805b76ad482e`), file `turni-overrides.json` (`{ "overrides": { "YYYY-MM-DD": { t, c?, fineOra?, straord?, nota? } } }`). Only days that differ from the base are stored.
+- **Altri file sullo stesso Gist** (letti dalla bacheca via URL raw, scritti dall'editor via API):
+  - `farmacie-pos.json` — coordinate per la mappa.
+  - `contenuti.json` — `{ servizi[], annunci[], ticker{scorre,velocita}, pubblicita{intervalloSec,durataSec,slide[]} }`. La chiave `pubblicita` alimenta lo **spot a tutto schermo** sul totem (overlay che compare ogni `intervalloSec` per `durataSec`, slide immagine o testo; solo sul kiosk, vedi `pianificaSpot`/`isMobile` in `index.html`). Le immagini sono data URL ridimensionati (lato max 1920, JPEG q0.8) caricati dal pannello "📺 Pubblicità" dell'editor.
+  - `sabato.json` — `{ "YYYY-MM-DD": { orario, farmacie:[...] } }`. Le **farmacie aperte il sabato pomeriggio** (orario continuato). La bacheca, il sabato dalle 13:00 alle 20:00, sostituisce la sezione "Prossimi turni" con questo elenco (ordinato per vicinanza), vedi `sabatoPomeriggioOggi`/`renderNext`. Si popola dal pannello "🗓 Sabato pom." dell'editor incollando il testo del documento dell'Ordine (parser `parseSabatoPomeriggio`); l'editor scarta da solo i sabati passati al salvataggio. **Fonte**: i file `SABATO POMERIGGIO <data>.doc` nella cartella Drive `turni` del titolare.
 
 ## Run / build / test
 

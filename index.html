@@ -270,6 +270,7 @@ let POSIZIONI = {};            // nome -> [lat, lng], dal Gist farmacie-pos.json
 let mappa = null, layerMarker = null;
 
 let overrides = {};
+let SABATO = {};               // dal Gist (sabato.json): { 'YYYY-MM-DD': { orario, farmacie:[] } }
 let CONTENUTI = {};            // contenuti editabili dal Gist (contenuti.json): { servizi, annunci }
 const SERVIZI_DEFAULT = ['Holter ECG','Holter Pressorio','Elettrocardiogramma','Misurazione PA'];
 
@@ -344,6 +345,13 @@ const I18N_ORARIO = {
   ar: ['مفتوحة 24 ساعة', 'مفتوحة حتى', 'هنا']
 };
 const LOCALE = { it:'it-IT', en:'en-GB', fr:'fr-FR', es:'es-ES', de:'de-DE', pt:'pt-PT', zh:'zh-CN', ar:'ar', ro:'ro-RO', sq:'sq-AL' };
+// Etichetta della sezione "aperte il sabato pomeriggio" (sostituisce "prossimi turni" nelle
+// ore del sabato pomeriggio, vedi sabatoPomeriggioOggi/renderNext).
+const I18N_SAT = {
+  it:'Aperte sabato pomeriggio', en:'Open Saturday afternoon', fr:'Ouvertes samedi après-midi',
+  es:'Abiertas sábado tarde', de:'Samstagnachmittag geöffnet', pt:'Abertas sábado à tarde',
+  zh:'周六下午营业', ar:'مفتوحة بعد ظهر السبت', ro:'Deschise sâmbătă după-amiază', sq:'Hapur të shtunën pasdite'
+};
 let LANG = 'it';
 let langResetTimer = null;
 function t(k) { return (I18N[LANG] && I18N[LANG][k]) || I18N.it[k] || k; }
@@ -428,16 +436,18 @@ async function fetchGistRaw(nome) {
 async function loadOverrides() {
   try {
     // Letture in parallelo dagli URL raw (no limite API). Un file mancante => null.
-    const [baseTxt, ovTxt, posTxt, contTxt, anagTxt] = await Promise.all([
+    const [baseTxt, ovTxt, posTxt, contTxt, anagTxt, sabTxt] = await Promise.all([
       fetchGistRaw('turni-base.json'),
       fetchGistRaw(GIST_FILE),
       fetchGistRaw('farmacie-pos.json'),
       fetchGistRaw('contenuti.json'),
       fetchGistRaw('farmacie.json'),
+      fetchGistRaw('sabato.json'),
     ]);
     // Base dal Gist (se presente): ha la precedenza sul seed locale del repo
     if (baseTxt) { try { const b = JSON.parse(baseTxt); if (b && Object.keys(b).length) TURNI_BASE = b; } catch(e) {} }
     overrides = ovTxt ? (JSON.parse(ovTxt).overrides || {}) : {};
+    try { SABATO = sabTxt ? (JSON.parse(sabTxt) || {}) : {}; } catch(e) { SABATO = {}; }
     POSIZIONI = posTxt ? (JSON.parse(posTxt) || {}) : {};
     CONTENUTI = contTxt ? (JSON.parse(contTxt) || {}) : {};
     // Rete di sicurezza: se l'anagrafica locale (data/farmacie.json) non si è caricata
@@ -622,7 +632,48 @@ function renderToday() {
   entries.forEach(e => cont.appendChild(buildFarmCard(e)));
 }
 
+// Finestra "sabato pomeriggio": sabato dalle 13:00 alle 20:00. Ritorna i dati del giorno
+// (dal Gist sabato.json) se presenti, altrimenti null → si mostrano i normali prossimi turni.
+function sabatoPomeriggioOggi() {
+  const now = new Date();
+  const h = now.getHours();
+  if (now.getDay() !== 6 || h < 13 || h >= 20) return null;
+  return SABATO[toKey(now)] || null;
+}
+
+// Elenco delle farmacie aperte il sabato pomeriggio (al posto dei "prossimi turni").
+// Ordinate per vicinanza al kiosk: le più comode restano visibili anche se la lista,
+// lunga, viene tagliata da .prossimi { overflow:hidden }.
+function renderSabato(sab) {
+  const list = document.getElementById('nextList');
+  list.innerHTML = '';
+  const arr = (Array.isArray(sab.farmacie) ? sab.farmacie : []).map(n => ({ nome: n, dist: distanzaKm(n) }));
+  arr.sort((a, b) => (a.dist == null ? Infinity : a.dist) - (b.dist == null ? Infinity : b.dist));
+  arr.forEach(e => {
+    const info = infoFarmacie(e.nome)[0] || {};
+    const isUs = e.nome === 'Della Stazione';
+    const addr = info.indirizzo ? `📍 ${info.indirizzo}${info.zona ? ' (' + info.zona + ')' : ''}` : '';
+    const item = document.createElement('div');
+    item.className = 'next-item';
+    item.innerHTML =
+      `<span class="next-name${isUs ? ' is-us' : ''}" style="flex:0 0 auto;min-width:150px">Farm. ${e.nome}</span>` +
+      `<span class="next-name" style="flex:1;color:#666;font-size:12px">${addr}</span>` +
+      `<span class="next-badges"><span class="next-fine">${fmtDist(e.nome, e.dist)}</span></span>`;
+    list.appendChild(item);
+  });
+}
+
 function renderNext() {
+  const bar = document.getElementById('barUpcoming');
+  // Il sabato pomeriggio la sezione mostra le farmacie aperte (orario continuato) invece
+  // dei prossimi turni notturni; fuori da quella finestra torna la lista normale.
+  const sab = sabatoPomeriggioOggi();
+  if (sab) {
+    bar.textContent = (I18N_SAT[LANG] || I18N_SAT.it) + ' · ' + (sab.orario || '15:30–19:30');
+    renderSabato(sab);
+    return;
+  }
+  bar.textContent = t('upcoming');
   const now = new Date();
   const [h, m] = [now.getHours(), now.getMinutes()];
   let start = new Date(now);

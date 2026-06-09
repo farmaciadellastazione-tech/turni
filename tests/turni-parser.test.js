@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 // turni-parser.js è UMD (module.exports in Node): lo carico via require, come fa
 // l'editor via <script src> e il generatore CLI via require.
 const require = createRequire(import.meta.url);
-const { CANON, parseAnnualText, parseBulletin } = require('../turni-parser.js');
+const { CANON, parseAnnualText, parseBulletin, parseSabatoPomeriggio } = require('../turni-parser.js');
 
 const DATA = join(dirname(fileURLToPath(import.meta.url)), '..', 'data');
 const leggi = (f) => readFileSync(join(DATA, f), 'utf8');
@@ -115,4 +115,40 @@ describe('parseBulletin — bollettini settimanali reali (fixture estratte da PD
       expect(problemi).toEqual([]);
     });
   }
+});
+
+describe('parseSabatoPomeriggio — documento "Farmacie aperte sabato pomeriggio"', () => {
+  it('20/06/2026: data, orario ed elenco (con Del Porto)', () => {
+    const r = parseSabatoPomeriggio(leggi('esempio-sabato-2026-06-20.txt'));
+    expect(r.problemi).toEqual([]);
+    expect(r.data).toBe('2026-06-20');
+    expect(r.orario).toBe('15:30–19:30');
+    expect(r.farmacie).toEqual([
+      'Argentieri', 'Beretta', 'Bonaschi', 'Centrale', 'Croce Bianca', 'Croce Rossa',
+      'Croce Verde', 'Del Porto', 'Degli Speziali', 'Della Marina', 'Della Stazione',
+      'Di Marola', 'Di Prima', 'Farina', 'Farmaceutica', 'Felia Prione', 'Internazionale',
+      'Maglio', 'Maimone', 'Tapparo', 'Tarantola',
+    ]);
+  });
+
+  it('13/06/2026: variante con Dell\'Arsenale al posto di Del Porto', () => {
+    const r = parseSabatoPomeriggio(leggi('esempio-sabato-2026-06-13.txt'));
+    expect(r.problemi).toEqual([]);
+    expect(r.data).toBe('2026-06-13');
+    expect(r.farmacie).toContain("Dell'Arsenale");
+    expect(r.farmacie).not.toContain('Del Porto');
+    expect(r.farmacie).toHaveLength(21);
+  });
+
+  it('non confonde i nomi-via con le farmacie: "Migliarina" è solo in un indirizzo, non tra le aperte', () => {
+    const r = parseSabatoPomeriggio(leggi('esempio-sabato-2026-06-20.txt'));
+    expect(r.farmacie).not.toContain('Migliarina');
+  });
+
+  it('"Di Marola" e "Maimone" sono due farmacie distinte (non il turno composto)', () => {
+    const r = parseSabatoPomeriggio(leggi('esempio-sabato-2026-06-20.txt'));
+    expect(r.farmacie).toContain('Di Marola');
+    expect(r.farmacie).toContain('Maimone');
+    expect(r.farmacie).not.toContain('Di Marola/Maimone');
+  });
 });
