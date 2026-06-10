@@ -1109,12 +1109,19 @@ async function importaSabato(file) {
     if (!data) { setStatus('⚠ Data non trovata nel documento (manca "<giorno> <mese> <anno>"). Controlla di aver scelto il file giusto.', true); return; }
     if (!farmacie.length) { setStatus('⚠ Nessuna farmacia riconosciuta nel documento.', true); return; }
     if (problemi.length) console.warn('Sabato pomeriggio — avvisi:', problemi);
-    const token = getToken();
-    if (!token) { setStatus(`✓ Documento letto: sabato ${data}, ${farmacie.length} farmacie. Inserisci il GitHub Token per salvare sul Gist.`, false); return; }
-    // Mostra anche gli avvisi del parser (nomi recuperati / token non riconosciuti): col
-    // .doc binario può capitare, e così il titolare li vede prima di salvare, non solo in console.
+    // Anteprima leggibile (data, orario, elenco, eventuali avvisi del parser come nomi
+    // recuperati / token non riconosciuti): col .doc binario può capitare, e così il
+    // titolare la vede prima di salvare, non solo in console. La riusiamo nei due casi.
     const avvisi = problemi.length ? `\n\n⚠ Avvisi:\n- ${problemi.join('\n- ')}` : '';
-    if (!confirm(`Sabato ${data} (${orario}): riconosciute ${farmacie.length} farmacie.\n\n${farmacie.join(', ')}${avvisi}\n\nSalvare sul Gist? (la bacheca lo mostrerà il sabato pomeriggio)`)) {
+    const riepilogo = `Sabato ${data} (${orario}): riconosciute ${farmacie.length} farmacie.\n\n${farmacie.join(', ')}${avvisi}`;
+    const token = getToken();
+    // Senza token non si può salvare: mostriamo comunque l'anteprima (solo controllo).
+    if (!token) {
+      alert(`${riepilogo}\n\n(Anteprima — inserisci il GitHub Token per poter salvare sul Gist.)`);
+      setStatus(`✓ Documento letto: sabato ${data}, ${farmacie.length} farmacie. Inserisci il GitHub Token per salvare sul Gist.`, false);
+      return;
+    }
+    if (!confirm(`${riepilogo}\n\nSalvare sul Gist? (la bacheca lo mostrerà il sabato pomeriggio)`)) {
       setStatus('Import sabato annullato.', false); return;
     }
     // Parte dalle voci esistenti, scarta i sabati passati (non servono più), aggiunge/aggiorna questo.
