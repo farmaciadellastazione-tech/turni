@@ -140,6 +140,28 @@ describe('parseSabatoPomeriggio — documento "Farmacie aperte sabato pomeriggio
     expect(r.farmacie).toHaveLength(21);
   });
 
+  it('import .doc: recupera un nome storpiato da Word (DELL\'ARSENALE -> "DEL2\\x12ARSENALE")', () => {
+    // Riproduce il testo grezzo letto da un .doc binario (windows-1252): intestazione
+    // binaria, nomi separati da \r, un nome con byte di servizio in mezzo, poi gli
+    // indirizzi. Il parser deve saltare l'header, recuperare il nome storpiato e
+    // fermarsi al primo indirizzo, restituendo tutte le 21 farmacie.
+    const doc = [
+      '\x00\x00\x07bjbjnrnr\x00\x00', 'ORDINE PROVINCIALE FARMACISTI', 'LA SPEZIA',
+      'FARMACIE APERTE', 'SABATO POMERIGGIO', '13 GIUGNO 2026', 'ORARIO MINIMO 15.30  -  19.30 ',
+      'ARGENTIERI', 'BERETTA', 'BONASCHI', 'CENTRALE', 'CROCE BIANCA', 'CROCE ROSSA', 'CROCE VERDE',
+      'DEGLI SPEZIALI', 'DEL2\x12ARSENALE', 'DELLA MARINA', 'DELLA STAZIONE', 'DI MAROLA', 'DI PRIMA',
+      'FARINA', 'FARMACEUTICA', 'FELIA PRIONE', 'INTERNAZIONALE', 'MAGLIO', 'MAIMONE', 'TAPPARO',
+      'TARANTOLA', 'VIA V. VENETO 117  -0187 511179', 'VIA DEL CANALETTO 302 -MIGLIARINA',
+    ].join('\r');
+    const r = parseSabatoPomeriggio(doc);
+    expect(r.data).toBe('2026-06-13');
+    expect(r.orario).toBe('15:30–19:30');
+    expect(r.farmacie).toContain("Dell'Arsenale");
+    expect(r.farmacie).not.toContain('Migliarina');
+    expect(r.farmacie).toHaveLength(21);
+    expect(r.problemi.some(p => /recuperato/.test(p))).toBe(true);
+  });
+
   it('non confonde i nomi-via con le farmacie: "Migliarina" è solo in un indirizzo, non tra le aperte', () => {
     const r = parseSabatoPomeriggio(leggi('esempio-sabato-2026-06-20.txt'));
     expect(r.farmacie).not.toContain('Migliarina');
