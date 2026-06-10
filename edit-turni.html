@@ -87,8 +87,8 @@
     onclick="document.getElementById('pdfBollettino').click()">📋 Importa bollettino settimanale (PDF)</button>
   <input type="file" id="pdfBollettino" accept="application/pdf" style="display:none" onchange="importaBollettino(this.files[0])">
   <button style="background:#5d4037;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
-    onclick="document.getElementById('pdfSabato').click()">🗓 Importa sabato pomeriggio (PDF)</button>
-  <input type="file" id="pdfSabato" accept="application/pdf" style="display:none" onchange="importaSabato(this.files[0])">
+    onclick="document.getElementById('pdfSabato').click()">🗓 Importa sabato pomeriggio (Word/PDF)</button>
+  <input type="file" id="pdfSabato" accept="application/pdf,application/msword,.doc" style="display:none" onchange="importaSabato(this.files[0])">
   <button style="background:#00695c;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
     onclick="apriPosizioni()">📍 Posizioni farmacie</button>
   <button style="background:#00838f;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
@@ -1089,18 +1089,32 @@ function oggiKey() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
+// Il documento "sabato pomeriggio" dell'Ordine arriva come .doc (Word 97-2003) dalla
+// cartella Drive del titolare; a volte come PDF stampato. Il PDF passa da pdf.js; il
+// .doc binario lo leggo grezzo come windows-1252 (il testo è memorizzato single-byte,
+// con \r tra i paragrafi): il parser salta l'intestazione binaria, raccoglie i nomi e
+// si ferma agli indirizzi. I rari byte di servizio dentro un nome li recupera il fuzzy.
+async function estraiTestoSabato(file) {
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+  if (isPdf) return estraiTestoPDF(file);
+  const buf = await file.arrayBuffer();
+  return new TextDecoder('windows-1252').decode(buf);
+}
 async function importaSabato(file) {
   if (!file) return;
   setStatus('Lettura del documento sabato pomeriggio...', false);
   try {
-    const text = await estraiTestoPDF(file);
+    const text = await estraiTestoSabato(file);
     const { data, orario, farmacie, problemi } = TurniParser.parseSabatoPomeriggio(text);
     if (!data) { setStatus('⚠ Data non trovata nel documento (manca "<giorno> <mese> <anno>"). Controlla di aver scelto il file giusto.', true); return; }
     if (!farmacie.length) { setStatus('⚠ Nessuna farmacia riconosciuta nel documento.', true); return; }
     if (problemi.length) console.warn('Sabato pomeriggio — avvisi:', problemi);
     const token = getToken();
     if (!token) { setStatus(`✓ Documento letto: sabato ${data}, ${farmacie.length} farmacie. Inserisci il GitHub Token per salvare sul Gist.`, false); return; }
-    if (!confirm(`Sabato ${data} (${orario}): riconosciute ${farmacie.length} farmacie.\n\n${farmacie.join(', ')}\n\nSalvare sul Gist? (la bacheca lo mostrerà il sabato pomeriggio)`)) {
+    // Mostra anche gli avvisi del parser (nomi recuperati / token non riconosciuti): col
+    // .doc binario può capitare, e così il titolare li vede prima di salvare, non solo in console.
+    const avvisi = problemi.length ? `\n\n⚠ Avvisi:\n- ${problemi.join('\n- ')}` : '';
+    if (!confirm(`Sabato ${data} (${orario}): riconosciute ${farmacie.length} farmacie.\n\n${farmacie.join(', ')}${avvisi}\n\nSalvare sul Gist? (la bacheca lo mostrerà il sabato pomeriggio)`)) {
       setStatus('Import sabato annullato.', false); return;
     }
     // Parte dalle voci esistenti, scarta i sabati passati (non servono più), aggiunge/aggiorna questo.

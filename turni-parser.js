@@ -189,6 +189,29 @@
     }
     return null;
   }
+  // Parole con cui iniziano gli INDIRIZZI: segnano la fine del blocco nomi.
+  const ADDR_START = /^(VIA|VIALE|CORSO|C\.?SO|PIAZZA|P\.?ZZA|P\.?ZA|LARGO|SALITA|GALLERIA|LOC)$/;
+  // Recupero "fuzzy" per token storpiati DENTRO il blocco nomi. Serve all'import del
+  // .doc dell'Ordine: Word salva certi run con byte di servizio in mezzo al nome
+  // (es. DELL'ARSENALE -> "DEL\x12ARSENALE"), che nessun alias intercetta. Confronto la
+  // versione sole-lettere col dizionario e accetto se la distanza di edit è minima.
+  const SAB_NORM = {};
+  for (const k in SAB_ALIAS) SAB_NORM[k.replace(/[^A-Z]/gi, '').toUpperCase()] = SAB_ALIAS[k];
+  function levenshtein(a, b) {
+    const m = a.length, n = b.length;
+    const d = Array.from({ length: m + 1 }, (_, r) => [r, ...new Array(n).fill(0)]);
+    for (let j = 0; j <= n; j++) d[0][j] = j;
+    for (let r = 1; r <= m; r++) for (let c = 1; c <= n; c++)
+      d[r][c] = Math.min(d[r - 1][c] + 1, d[r][c - 1] + 1, d[r - 1][c - 1] + (a[r - 1] === b[c - 1] ? 0 : 1));
+    return d[m][n];
+  }
+  function recuperaFuzzy(token) {
+    const t = token.replace(/[^A-Z]/gi, '').toUpperCase();
+    if (t.length < 5) return null;                         // troppo corto: niente match azzardati
+    let best = null, bd = 99;
+    for (const k in SAB_NORM) { const dd = levenshtein(t, k); if (dd < bd) { bd = dd; best = k; } }
+    return (best && bd <= 2) ? SAB_NORM[best] : null;
+  }
   // Estrae { data:'YYYY-MM-DD'|null, orario:'HH:MM–HH:MM', farmacie:[nomi], problemi:[] }.
   // I nomi si raccolgono dal PRIMO blocco contiguo di farmacie riconosciute e ci si ferma
   // al primo token non-nome: così gli indirizzi (che possono contenere parole-farmacia
@@ -213,11 +236,25 @@
     let i = 0;
     while (i < toks.length && !matchSab(toks, i)) i++;   // salta intestazione, data, orario
     const farmacie = [];
+    let buchi = 0;                                         // token consecutivi non riconosciuti
     while (i < toks.length) {                              // raccogli il blocco nomi
+      const pulito = toks[i].toUpperCase().replace(/[^A-Z'./]/g, '');
+      if (ADDR_START.test(pulito)) break;                 // iniziano gli indirizzi: stop
       const m = matchSab(toks, i);
-      if (!m) break;                                       // primo indirizzo: stop
-      if (!farmacie.includes(m.name)) farmacie.push(m.name);
-      i += m.used;
+      if (m) {                                             // nome riconosciuto subito
+        if (!farmacie.includes(m.name)) farmacie.push(m.name);
+        i += m.used; buchi = 0; continue;
+      }
+      const cand = recuperaFuzzy(pulito);                 // nome storpiato dal .doc?
+      if (cand) {
+        if (!farmacie.includes(cand)) farmacie.push(cand);
+        problemi.push('nome recuperato: "' + toks[i] + '" -> ' + cand);
+        buchi = 0;
+      } else {
+        problemi.push('token non riconosciuto: "' + toks[i] + '"');
+        if (++buchi >= 2) break;                           // due buchi di fila: fine del blocco
+      }
+      i++;
     }
     if (!farmacie.length) problemi.push('nessuna farmacia riconosciuta');
 
