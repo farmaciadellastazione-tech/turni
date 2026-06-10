@@ -2,11 +2,15 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Kiosk touch: blocca lo zoom da gesto (pinch / doppio-tap) per non far "uscire di scala"
+     lo schermo durante la pulizia. user-scalable=no + maximum-scale lo impediscono. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Farmacia della Stazione – Turni</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #f5f7f5; font-family: 'Segoe UI', Arial, sans-serif; }
+  /* Kiosk touch: nessuna gesture di pan/zoom sul touchscreen (la bacheca è già a tutto schermo,
+     overflow:hidden). Evita che pulendo lo schermo parta il pinch-zoom. */
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #f5f7f5; font-family: 'Segoe UI', Arial, sans-serif; touch-action: none; }
   .page { display: flex; flex-direction: column; height: 100vh; }
   .header { background: #fff; border-bottom: 3px solid #2e7d4f; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .header-left { display: flex; align-items: center; gap: 12px; }
@@ -257,6 +261,21 @@
 <div class="spot-overlay" id="spotOverlay" onclick="chiudiSpotManuale()"></div>
 
 <script>
+// --- Kiosk: blocca ogni zoom della PAGINA (non della mappa Leaflet, che usa i suoi handler) ---
+// Difesa per i casi che il viewport/touch-action non copre: Ctrl+rotella e Ctrl +/-/0 da
+// tastiera (manutenzione con mouse/tastiera) e il pinch via gesture events.
+(function bloccaZoomPagina(){
+  // Ctrl + rotella del mouse = zoom pagina
+  window.addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // Ctrl con + / - / 0 (anche tastierino) = zoom pagina
+  window.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && ['+','-','=','0'].includes(e.key)) e.preventDefault();
+  });
+  // gesture events (pinch) dove supportati
+  ['gesturestart','gesturechange','gestureend'].forEach(ev =>
+    document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+})();
+
 const GIST_ID = '8f699fa0fd4566b2bbb2805b76ad482e';
 const GIST_OWNER = 'farmaciadellastazione-tech';
 const GIST_FILE = 'turni-overrides.json';
