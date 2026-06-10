@@ -238,7 +238,7 @@
     </div>
   </div>
   <div style="padding:9px 12px;font-size:12px;color:#555;background:#f7faf8;border-bottom:1px solid #e0e8e2;">
-    Spot a tutto schermo mostrati solo sul totem (non sui telefoni). Ogni slide può essere un'immagine (volantino/offerta) o una schermata di testo, e ruotano a ciclo. Le date Dal/Al sono opzionali.
+    Spot a tutto schermo mostrati solo sul totem (non sui telefoni). Ogni slide può essere un'immagine o un PDF (volantino/offerta — una slide per pagina) o una schermata di testo, e ruotano a ciclo. Le date Dal/Al sono opzionali.
   </div>
   <div style="padding:9px 12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:#eef6ff;border-bottom:1px solid #d6e2f5;font-size:13px;color:#333;">
     <label style="display:flex;align-items:center;gap:6px;">Ogni <input type="number" id="pubbIntervallo" min="15" step="15" oninput="pubblicitaDirty=true;aggiornaPubbCount()" style="width:72px;padding:6px;border:1px solid #ccc;border-radius:6px;font-size:14px;"> sec</label>
@@ -964,6 +964,27 @@ function ridimensionaImg(fileObj) {
     fr.readAsDataURL(fileObj);
   });
 }
+// Rende un PDF (volantino/offerta) in data URL JPEG, UNO PER PAGINA (lato max PUBB_MAX_DIM):
+// così un volantino multi-pagina diventa più slide. Usa pdf.js come gli altri import.
+async function pdfInImmagini(fileObj) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('pdf.js non caricato (serve connessione internet)');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER;
+  const buf = await fileObj.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const urls = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    // Scala la pagina così che il lato lungo sia PUBB_MAX_DIM (nitida sul totem, leggera sul Gist).
+    const base = page.getViewport({ scale: 1 });
+    const scale = PUBB_MAX_DIM / Math.max(base.width, base.height);
+    const vp = page.getViewport({ scale });
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+    await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+    urls.push(cv.toDataURL('image/jpeg', PUBB_JPEG_Q));
+  }
+  return urls;
+}
 function rigaSlide(s) {
   s = s || {};
   const row = document.createElement('div');
@@ -976,8 +997,8 @@ function rigaSlide(s) {
       '<button class="sp-del" style="margin-left:auto;background:#fdecea;color:#c0392b;border:1px solid #f5c6cb;border-radius:6px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer;">🗑 Rimuovi</button>' +
     '</div>' +
     '<div class="sp-img-fields">' +
-      '<button class="sp-pick" style="background:#1565c0;color:#fff;border:none;border-radius:6px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;">📷 Scegli immagine</button>' +
-      '<input type="file" class="sp-file" accept="image/*" style="display:none">' +
+      '<button class="sp-pick" style="background:#1565c0;color:#fff;border:none;border-radius:6px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;">📷 Scegli immagine o PDF</button>' +
+      '<input type="file" class="sp-file" accept="image/*,application/pdf" style="display:none">' +
       '<img class="sp-prev" style="display:none;max-width:100%;max-height:160px;margin-top:8px;border-radius:6px;border:1px solid #e0e8e2;">' +
     '</div>' +
     '<div class="sp-testo-fields" style="display:none;">' +
@@ -1012,11 +1033,22 @@ function rigaSlide(s) {
   row.querySelector('.sp-pick').addEventListener('click', () => file.click());
   file.addEventListener('change', async () => {
     if (!file.files || !file.files[0]) return;
+    const f = file.files[0];
+    const isPdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
     try {
-      const durl = await ridimensionaImg(file.files[0]);
-      prev.src = durl; prev.dataset.img = durl; prev.style.display = 'block';
+      if (isPdf) {
+        // PDF: una slide per pagina. La prima pagina riempie questa riga, le altre
+        // diventano nuove slide-immagine subito sotto.
+        const urls = await pdfInImmagini(f);
+        if (!urls.length) throw new Error('PDF senza pagine');
+        prev.src = urls[0]; prev.dataset.img = urls[0]; prev.style.display = 'block';
+        for (let i = 1; i < urls.length; i++) rigaSlide({ tipo: 'immagine', img: urls[i] });
+      } else {
+        const durl = await ridimensionaImg(f);
+        prev.src = durl; prev.dataset.img = durl; prev.style.display = 'block';
+      }
       pubblicitaDirty = true; aggiornaPubbCount();
-    } catch (e) { alert('⚠ Immagine non valida: ' + e.message); }
+    } catch (e) { alert('⚠ File non valido: ' + e.message); }
   });
   row.querySelectorAll('input,textarea').forEach(el =>
     el.addEventListener('input', () => { pubblicitaDirty = true; aggiornaPubbCount(); }));
