@@ -10,7 +10,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   /* Kiosk touch: nessuna gesture di pan/zoom sul touchscreen (la bacheca è già a tutto schermo,
      overflow:hidden). Evita che pulendo lo schermo parta il pinch-zoom. */
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #f5f7f5; font-family: 'Segoe UI', Arial, sans-serif; touch-action: none; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #f5f7f5; font-family: 'Segoe UI', Arial, 'Noto Sans Bengali', 'Noto Sans Devanagari', sans-serif; touch-action: none; }
   .page { display: flex; flex-direction: column; height: 100vh; }
   .header { background: #fff; border-bottom: 3px solid #2e7d4f; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .header-left { display: flex; align-items: center; gap: 12px; }
@@ -140,6 +140,10 @@
 <link rel="icon" href="icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Font per gli script non-latini/non-CJK (bengalese, devanagari/hindi): su Linux potrebbero
+     mancare nel sistema. Caricati come fallback per-glifo (vedi font-family di body). I CJK
+     (cinese/giapponese/coreano) usano i font di sistema già presenti. -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali&family=Noto+Sans+Devanagari&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="qrcode.js"></script>
@@ -172,6 +176,12 @@
       <button class="lang-btn" data-lang="ar" onclick="setLang('ar')" title="العربية"><img src="https://flagcdn.com/w40/sa.png" alt="AR"></button>
       <button class="lang-btn" data-lang="ro" onclick="setLang('ro')" title="Română"><img src="https://flagcdn.com/w40/ro.png" alt="RO"></button>
       <button class="lang-btn" data-lang="sq" onclick="setLang('sq')" title="Shqip"><img src="https://flagcdn.com/w40/al.png" alt="SQ"></button>
+      <button class="lang-btn" data-lang="uk" onclick="setLang('uk')" title="Українська"><img src="https://flagcdn.com/w40/ua.png" alt="UK"></button>
+      <button class="lang-btn" data-lang="ru" onclick="setLang('ru')" title="Русский"><img src="https://flagcdn.com/w40/ru.png" alt="RU"></button>
+      <button class="lang-btn" data-lang="bn" onclick="setLang('bn')" title="বাংলা"><img src="https://flagcdn.com/w40/bd.png" alt="BN"></button>
+      <button class="lang-btn" data-lang="hi" onclick="setLang('hi')" title="हिन्दी"><img src="https://flagcdn.com/w40/in.png" alt="HI"></button>
+      <button class="lang-btn" data-lang="ja" onclick="setLang('ja')" title="日本語"><img src="https://flagcdn.com/w40/jp.png" alt="JA"></button>
+      <button class="lang-btn" data-lang="ko" onclick="setLang('ko')" title="한국어"><img src="https://flagcdn.com/w40/kr.png" alt="KO"></button>
     </div>
     <div class="header-right">
       <div class="clock-time" id="clockTime">--:--</div>
@@ -305,7 +315,13 @@ const I18N = {
   zh: { onDuty:'值班药房', now:'现在', conturno:'协助药房', open:'营业中', upcoming:'接下来的值班', services:'服务', communications:'公告', shiftEnd:'值班结束：', noData:'无数据', modified:'已修改', shiftMap:'值班', us:'我们', weekRange:'周一至周六', updated:'已更新', offline:'本地数据（离线）', legal:'闭门服务仅限急用药品 · 固定费用：白天 €7,50 – 夜间 €10,00（Art. 9 D.M. 22/09/2017）' },
   ar: { onDuty:'الصيدلية المناوبة', now:'الآن', conturno:'صيدلية مساندة', open:'مفتوحة', upcoming:'المناوبات القادمة', services:'الخدمات', communications:'إعلانات', shiftEnd:'انتهاء المناوبة:', noData:'لا توجد بيانات', modified:'معدّل', shiftMap:'المناوبة', us:'نحن', weekRange:'الإثنين–السبت', updated:'تم التحديث', offline:'بيانات محلية (دون اتصال)', legal:'الخدمة عبر الباب المغلق للأدوية العاجلة فقط · رسم ثابت: نهاراً €7,50 – ليلاً €10,00 (المادة 9 من المرسوم الوزاري 22/09/2017)' },
   ro: { onDuty:'Farmacie de gardă', now:'Acum', conturno:'Farmacie de sprijin', open:'deschis', upcoming:'Gărzi următoare', services:'Servicii', communications:'Anunțuri', shiftEnd:'Sfârșit gardă:', noData:'Fără date', modified:'modificat', shiftMap:'De gardă', us:'Noi', weekRange:'Lun–Sâm', updated:'Actualizat', offline:'Date locale (offline)', legal:'Serviciu cu ușa închisă doar pentru medicamente urgente · Taxă fixă: ZI €7,50 – NOAPTE €10,00 (Art. 9 D.M. 22/09/2017)' },
-  sq: { onDuty:'Farmaci kujdestare', now:'Tani', conturno:'Farmaci mbështetëse', open:'hapur', upcoming:'Kujdestaritë e ardhshme', services:'Shërbime', communications:'Njoftime', shiftEnd:'Mbarimi i turnit:', noData:'Pa të dhëna', modified:'ndryshuar', shiftMap:'Kujdestare', us:'Ne', weekRange:'Hën–Sht', updated:'Përditësuar', offline:'Të dhëna lokale (offline)', legal:'Shërbim me derë të mbyllur vetëm për barna urgjente · Tarifë fikse: DITË €7,50 – NATË €10,00 (Art. 9 D.M. 22/09/2017)' }
+  sq: { onDuty:'Farmaci kujdestare', now:'Tani', conturno:'Farmaci mbështetëse', open:'hapur', upcoming:'Kujdestaritë e ardhshme', services:'Shërbime', communications:'Njoftime', shiftEnd:'Mbarimi i turnit:', noData:'Pa të dhëna', modified:'ndryshuar', shiftMap:'Kujdestare', us:'Ne', weekRange:'Hën–Sht', updated:'Përditësuar', offline:'Të dhëna lokale (offline)', legal:'Shërbim me derë të mbyllur vetëm për barna urgjente · Tarifë fikse: DITË €7,50 – NATË €10,00 (Art. 9 D.M. 22/09/2017)' },
+  uk: { onDuty:'Чергова аптека', now:'Зараз', conturno:'Допоміжна аптека', open:'відчинено', upcoming:'Наступні чергування', services:'Послуги', communications:'Оголошення', shiftEnd:'Кінець чергування:', noData:'Немає даних', modified:'змінено', shiftMap:'Чергова', us:'Ми', weekRange:'Пн–Сб', updated:'Оновлено', offline:'Локальні дані (офлайн)', legal:'Обслуговування за зачиненими дверима лише для невідкладних ліків · Фіксована плата: ДЕНЬ €7,50 – НІЧ €10,00 (Art. 9 D.M. 22/09/2017)' },
+  ru: { onDuty:'Дежурная аптека', now:'Сейчас', conturno:'Вспомогательная аптека', open:'открыто', upcoming:'Следующие дежурства', services:'Услуги', communications:'Объявления', shiftEnd:'Конец дежурства:', noData:'Нет данных', modified:'изменено', shiftMap:'Дежурная', us:'Мы', weekRange:'Пн–Сб', updated:'Обновлено', offline:'Локальные данные (офлайн)', legal:'Обслуживание при закрытых дверях только для срочных лекарств · Фиксированная плата: ДЕНЬ €7,50 – НОЧЬ €10,00 (Art. 9 D.M. 22/09/2017)' },
+  bn: { onDuty:'কর্তব্যরত ফার্মেসি', now:'এখন', conturno:'সহায়ক ফার্মেসি', open:'খোলা', upcoming:'পরবর্তী পালা', services:'সেবা', communications:'ঘোষণা', shiftEnd:'পালা শেষ:', noData:'কোনো তথ্য নেই', modified:'পরিবর্তিত', shiftMap:'কর্তব্যরত', us:'আমরা', weekRange:'সোম–শনি', updated:'হালনাগাদ', offline:'স্থানীয় তথ্য (অফলাইন)', legal:'বন্ধ দরজার সেবা শুধুমাত্র জরুরি ওষুধের জন্য · নির্ধারিত ফি: দিন €7,50 – রাত €10,00 (Art. 9 D.M. 22/09/2017)' },
+  hi: { onDuty:'ड्यूटी पर फार्मेसी', now:'अभी', conturno:'सहायक फार्मेसी', open:'खुला', upcoming:'आगामी ड्यूटी', services:'सेवाएँ', communications:'सूचनाएँ', shiftEnd:'ड्यूटी समाप्त:', noData:'कोई डेटा नहीं', modified:'संशोधित', shiftMap:'ड्यूटी पर', us:'हम', weekRange:'सोम–शनि', updated:'अपडेट किया गया', offline:'स्थानीय डेटा (ऑफ़लाइन)', legal:'बंद दरवाज़े की सेवा केवल आपातकालीन दवाओं के लिए · निश्चित शुल्क: दिन €7,50 – रात €10,00 (Art. 9 D.M. 22/09/2017)' },
+  ja: { onDuty:'当番薬局', now:'現在', conturno:'補助薬局', open:'営業中', upcoming:'次の当番', services:'サービス', communications:'お知らせ', shiftEnd:'当番終了:', noData:'データなし', modified:'変更済み', shiftMap:'当番', us:'当店', weekRange:'月–土', updated:'更新', offline:'ローカルデータ（オフライン）', legal:'閉店時の対応は緊急の医薬品のみ · 定額料金：昼 €7,50 – 夜 €10,00（Art. 9 D.M. 22/09/2017）' },
+  ko: { onDuty:'당번 약국', now:'지금', conturno:'보조 약국', open:'영업 중', upcoming:'다음 당번', services:'서비스', communications:'공지', shiftEnd:'당번 종료:', noData:'데이터 없음', modified:'수정됨', shiftMap:'당번', us:'본 약국', weekRange:'월–토', updated:'업데이트됨', offline:'로컬 데이터(오프라인)', legal:'닫힌 문 서비스는 긴급 의약품만 해당 · 고정 요금: 주간 €7,50 – 야간 €10,00 (Art. 9 D.M. 22/09/2017)' }
 };
 // QR tessera fedeltà (portale Consorzio InFarmacia). Testi del riquadro [titolo, sottotitolo].
 const FIDELITY_URL = 'https://qrkit.co/eCooTC';
@@ -319,7 +335,13 @@ const I18N_QR = {
   de: ['Holen Sie sich Ihre Treuekarte', 'QR scannen · kostenlos'],
   pt: ['Faça o seu cartão fidelidade', 'Leia o QR · é grátis'],
   zh: ['办理会员忠诚卡', '扫描二维码 · 免费'],
-  ar: ['احصل على بطاقة الولاء', 'امسح رمز QR · مجاناً']
+  ar: ['احصل على بطاقة الولاء', 'امسح رمز QR · مجاناً'],
+  uk: ['Оформіть картку лояльності', 'Скануйте QR · безкоштовно'],
+  ru: ['Оформите карту лояльности', 'Сканируйте QR · бесплатно'],
+  bn: ['আপনার লয়্যালটি কার্ড নিন', 'QR স্ক্যান করুন · বিনামূল্যে'],
+  hi: ['अपना लॉयल्टी कार्ड लें', 'QR स्कैन करें · निःशुल्क'],
+  ja: ['ポイントカードを作りましょう', 'QRをスキャン · 無料'],
+  ko: ['적립 카드를 만드세요', 'QR 스캔 · 무료']
 };
 // Secondo QR: codice punto vendita della farmacia, da inquadrare DENTRO l'app del
 // circuito (non con la fotocamera). Testi del riquadro [titolo, sottotitolo].
@@ -334,7 +356,13 @@ const I18N_QR_APP = {
   de: ['App schon installiert? Apotheke hinzufügen', 'Im App-Scanner scannen'],
   pt: ['Já tem a app? Adicione a farmácia', 'Leia no scanner da app'],
   zh: ['已下载App？添加本药房', '请用App内扫描'],
-  ar: ['هل لديك التطبيق؟ أضف الصيدلية', 'امسح من خلال ماسح التطبيق']
+  ar: ['هل لديك التطبيق؟ أضف الصيدلية', 'امسح من خلال ماسح التطبيق'],
+  uk: ['Вже маєте додаток? Додайте аптеку', 'Скануйте сканером додатка'],
+  ru: ['Уже есть приложение? Добавьте аптеку', 'Сканируйте сканером приложения'],
+  bn: ['অ্যাপ আছে? ফার্মেসি যোগ করুন', 'অ্যাপের স্ক্যানার দিয়ে স্ক্যান করুন'],
+  hi: ['ऐप है? फार्मेसी जोड़ें', 'ऐप के स्कैनर से स्कैन करें'],
+  ja: ['アプリをお持ちですか？薬局を追加', 'アプリのスキャナーで読み取り'],
+  ko: ['앱이 있으신가요? 약국 추가', '앱 스캐너로 스캔하세요']
 };
 // QR bacheca: apre questo stesso sito sul telefono. Testi del riquadro [titolo, sottotitolo].
 const TURNI_URL = 'https://farmaciadellastazione-tech.github.io/turni/';
@@ -348,7 +376,13 @@ const I18N_QR_TURNI = {
   de: ['Welche Apotheke hat Dienst?', 'Scannen: die Tafel auf dem Handy'],
   pt: ['Que farmácia está de plantão?', 'Leia: o quadro no seu telemóvel'],
   zh: ['想知道哪家药房值班？', '扫码：在手机上查看本看板'],
-  ar: ['تريد معرفة الصيدلية المناوبة؟', 'امسح: اللوحة على هاتفك']
+  ar: ['تريد معرفة الصيدلية المناوبة؟', 'امسح: اللوحة على هاتفك'],
+  uk: ['Яка аптека чергує?', 'Скануйте: дошка у вашому телефоні'],
+  ru: ['Какая аптека дежурит?', 'Сканируйте: доска в вашем телефоне'],
+  bn: ['কোন ফার্মেসি কর্তব্যরত?', 'স্ক্যান করুন: বোর্ডটি আপনার ফোনে'],
+  hi: ['कौन सी फार्मेसी ड्यूटी पर है?', 'स्कैन करें: यह बोर्ड आपके फ़ोन पर'],
+  ja: ['当番の薬局を知りたいですか？', 'スキャン：この掲示板をスマホで'],
+  ko: ['어느 약국이 당번인가요?', '스캔: 이 게시판을 휴대폰에서']
 };
 // Etichette: [turno aperto 24h, conturno "aperta fino" (+ ora), "qui" (distanza nulla)].
 const I18N_ORARIO = {
@@ -361,15 +395,23 @@ const I18N_ORARIO = {
   de: ['24h geöffnet', 'geöffnet bis', 'hier'],
   pt: ['aberta 24h', 'aberta até', 'aqui'],
   zh: ['24小时营业', '营业至', '这里'],
-  ar: ['مفتوحة 24 ساعة', 'مفتوحة حتى', 'هنا']
+  ar: ['مفتوحة 24 ساعة', 'مفتوحة حتى', 'هنا'],
+  uk: ['відчинено 24 год', 'відчинено до', 'тут'],
+  ru: ['открыто 24 ч', 'открыто до', 'здесь'],
+  bn: ['২৪ ঘণ্টা খোলা', 'খোলা পর্যন্ত', 'এখানে'],
+  hi: ['24 घंटे खुला', 'खुला तक', 'यहाँ'],
+  ja: ['24時間営業', '営業終了', 'ここ'],
+  ko: ['24시간 영업', '영업 마감', '여기']
 };
-const LOCALE = { it:'it-IT', en:'en-GB', fr:'fr-FR', es:'es-ES', de:'de-DE', pt:'pt-PT', zh:'zh-CN', ar:'ar', ro:'ro-RO', sq:'sq-AL' };
+const LOCALE = { it:'it-IT', en:'en-GB', fr:'fr-FR', es:'es-ES', de:'de-DE', pt:'pt-PT', zh:'zh-CN', ar:'ar', ro:'ro-RO', sq:'sq-AL', uk:'uk-UA', ru:'ru-RU', bn:'bn-BD', hi:'hi-IN', ja:'ja-JP', ko:'ko-KR' };
 // Etichetta della sezione "aperte il sabato pomeriggio" (sostituisce "prossimi turni" nelle
 // ore del sabato pomeriggio, vedi sabatoPomeriggioOggi/renderNext).
 const I18N_SAT = {
   it:'Aperte sabato pomeriggio', en:'Open Saturday afternoon', fr:'Ouvertes samedi après-midi',
   es:'Abiertas sábado tarde', de:'Samstagnachmittag geöffnet', pt:'Abertas sábado à tarde',
-  zh:'周六下午营业', ar:'مفتوحة بعد ظهر السبت', ro:'Deschise sâmbătă după-amiază', sq:'Hapur të shtunën pasdite'
+  zh:'周六下午营业', ar:'مفتوحة بعد ظهر السبت', ro:'Deschise sâmbătă după-amiază', sq:'Hapur të shtunën pasdite',
+  uk:'Відчинено в суботу пополудні', ru:'Открыто в субботу днём', bn:'শনিবার বিকেলে খোলা',
+  hi:'शनिवार दोपहर को खुला', ja:'土曜午後営業', ko:'토요일 오후 영업'
 };
 let LANG = 'it';
 let langResetTimer = null;
