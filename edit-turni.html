@@ -93,6 +93,8 @@
     onclick="apriPosizioni()">📍 Posizioni farmacie</button>
   <button style="background:#00838f;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
     onclick="apriServizi()">🩺 Servizi</button>
+  <button style="background:#3949ab;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
+    onclick="apriOrari()">🕑 Orari apertura</button>
   <button style="background:#ef6c00;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
     onclick="apriAnnunci()">📢 Annunci</button>
   <button style="background:#c2185b;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;margin-left:8px;"
@@ -192,6 +194,33 @@
   <textarea id="serviziText" oninput="serviziDirty=true;aggiornaServiziCount()"
     style="flex:1;min-height:0;border:none;outline:none;padding:12px;font-size:16px;line-height:1.8;resize:none;font-family:inherit;"
     placeholder="Holter ECG&#10;Holter Pressorio&#10;Elettrocardiogramma&#10;Misurazione PA"></textarea>
+</div>
+
+<!-- PANNELLO ORARI (orari di apertura della nostra farmacia → badge in bacheca) -->
+<div id="orariOverlay" style="display:none;position:fixed;inset:0;z-index:300;background:#fff;flex-direction:column;">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title">🕑 Orari apertura</div>
+      <div class="topbar-sub" id="orariCount">—</div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="save-btn" id="orariSaveBtn" onclick="salvaOrari()">💾 Salva</button>
+      <button class="save-btn" style="background:#e0e0e0;color:#333;" onclick="chiudiOrari()">✕ Chiudi</button>
+    </div>
+  </div>
+  <div style="padding:9px 12px;font-size:12px;color:#555;background:#f7faf8;border-bottom:1px solid #e0e8e2;">
+    Orari della <b>nostra</b> farmacia (Via Fiume 75): alimentano il badge <b>“Aperta ora / Chiusa”</b> in cima alla bacheca. Formato <code>08:30-19:30</code>; per l'orario spezzato usa la virgola: <code>08:30-12:30, 15:30-19:30</code>. Lascia <b>vuoto</b> un giorno di chiusura.
+  </div>
+  <div style="flex:1;min-height:0;overflow:auto;background:#f5f7f5;">
+    <div id="orariEditor" style="padding:14px 12px;"></div>
+    <div style="padding:9px 12px;font-size:12px;color:#555;background:#fff;border-top:1px solid #e0e8e2;border-bottom:1px solid #e0e8e2;">
+      <b>📅 Chiusure straordinarie / ferie</b> — giorni in cui la farmacia è chiusa a prescindere dagli orari qui sopra (il badge in bacheca diventa <b>“Chiusa”</b>). Per un solo giorno metti la stessa data in “Dal” e “Al”. La nota (es. <i>Ferie</i>) compare accanto al badge. Se siete <b>di turno</b> quel giorno il turno vince e restate aperti.
+    </div>
+    <div id="chiusureEditor" style="padding:10px 12px;"></div>
+    <div style="padding:0 12px 16px;">
+      <button onclick="aggiungiChiusura()" style="background:#3949ab;color:#fff;border:none;border-radius:6px;padding:10px 14px;font-size:14px;font-weight:700;cursor:pointer;width:100%;">+ Aggiungi chiusura</button>
+    </div>
+  </div>
 </div>
 
 <!-- PANNELLO ANNUNCI (comunicazioni mostrate in bacheca) -->
@@ -649,7 +678,7 @@ function resetDay() {
 
 // Avvisa se si chiude/ricarica con modifiche non salvate
 window.addEventListener('beforeunload', (e) => {
-  if (dirty || posDirty || serviziDirty || annunciDirty || pubblicitaDirty || modalHasChanges()) { e.preventDefault(); e.returnValue = ''; }
+  if (dirty || posDirty || serviziDirty || annunciDirty || orariDirty || pubblicitaDirty || modalHasChanges()) { e.preventDefault(); e.returnValue = ''; }
 });
 
 // --- Posizioni farmacie sulla mappa (salvate sul Gist: farmacie-pos.json) ---
@@ -786,6 +815,116 @@ async function salvaServizi() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     serviziDirty = false; aggiornaServiziCount();
     alert('✓ Servizi salvati sul Gist. La bacheca li userà entro 5 minuti.');
+  } catch (e) {
+    alert('⚠ Errore salvataggio: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '💾 Salva';
+}
+
+// --- Orari di apertura della nostra farmacia (badge "Aperta ora / Chiusa" in bacheca,
+// salvati sul Gist: contenuti.json -> orari). Chiave = giorno di getDay() (0=Dom … 6=Sab);
+// valore = stringa di intervalli "HH:MM-HH:MM" separati da virgola (vuoto = chiusa). ---
+const ORARI_DEFAULT = { 0:'', 1:'08:30-19:30', 2:'08:30-19:30', 3:'08:30-19:30', 4:'08:30-19:30', 5:'08:30-19:30', 6:'08:30-19:30' };
+const GIORNI_ORDINE = [[1,'Lunedì'],[2,'Martedì'],[3,'Mercoledì'],[4,'Giovedì'],[5,'Venerdì'],[6,'Sabato'],[0,'Domenica']];
+let orariDirty = false;
+function apriOrari() {
+  const o = (CONTENUTI.orari && typeof CONTENUTI.orari === 'object' && !Array.isArray(CONTENUTI.orari)) ? CONTENUTI.orari : ORARI_DEFAULT;
+  const ed = document.getElementById('orariEditor');
+  ed.innerHTML = '';
+  GIORNI_ORDINE.forEach(([g, nome]) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;';
+    const lab = document.createElement('label');
+    lab.style.cssText = 'flex:0 0 92px;font-weight:700;color:#333;';
+    lab.textContent = nome;
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.id = 'orariGiorno' + g;
+    inp.value = (o[g] || '').trim();
+    inp.placeholder = 'chiusa';
+    inp.style.cssText = 'flex:1;padding:9px 10px;border:1px solid #ccc;border-radius:6px;font-size:15px;font-family:inherit;';
+    inp.addEventListener('input', () => { orariDirty = true; aggiornaOrariCount(); });
+    row.appendChild(lab); row.appendChild(inp);
+    ed.appendChild(row);
+  });
+  // Chiusure straordinarie / ferie (contenuti.json -> chiusure: [{da, a, nota}]).
+  const ced = document.getElementById('chiusureEditor');
+  ced.innerHTML = '';
+  (Array.isArray(CONTENUTI.chiusure) ? CONTENUTI.chiusure : []).forEach(c => ced.appendChild(buildChiusuraRow(c)));
+  orariDirty = false;
+  aggiornaOrariCount();
+  document.getElementById('orariOverlay').style.display = 'flex';
+}
+function chiudiOrari() {
+  if (orariDirty && !confirm('Hai orari non salvati. Chiudere senza salvare?')) return;
+  document.getElementById('orariOverlay').style.display = 'none';
+}
+function orariDaEditor() {
+  const out = {};
+  GIORNI_ORDINE.forEach(([g]) => { out[g] = (document.getElementById('orariGiorno' + g).value || '').trim(); });
+  return out;
+}
+// Una riga di chiusura: Dal / Al (date) + nota + elimina. "Al" vuoto = un solo giorno.
+function buildChiusuraRow(c) {
+  c = c || {};
+  const row = document.createElement('div');
+  row.className = 'chiusura-row';
+  row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;';
+  const stile = 'padding:8px 9px;border:1px solid #ccc;border-radius:6px;font-size:14px;font-family:inherit;';
+  row.innerHTML =
+    `<label style="font-weight:700;color:#333;">Dal</label>` +
+    `<input type="date" class="ch-da" value="${c.da || ''}" style="${stile}">` +
+    `<label style="font-weight:700;color:#333;">Al</label>` +
+    `<input type="date" class="ch-a" value="${c.a || ''}" style="${stile}">` +
+    `<input type="text" class="ch-nota" value="${(c.nota || '').replace(/"/g, '&quot;')}" placeholder="Nota (es. Ferie)" style="flex:1;min-width:120px;${stile}">`;
+  const del = document.createElement('button');
+  del.textContent = '🗑';
+  del.style.cssText = 'background:#c62828;color:#fff;border:none;border-radius:6px;padding:8px 12px;font-size:14px;cursor:pointer;';
+  del.onclick = () => { row.remove(); orariDirty = true; aggiornaOrariCount(); };
+  row.appendChild(del);
+  row.querySelectorAll('input').forEach(el =>
+    el.addEventListener('input', () => { orariDirty = true; aggiornaOrariCount(); }));
+  return row;
+}
+function aggiungiChiusura() {
+  document.getElementById('chiusureEditor').appendChild(buildChiusuraRow({}));
+  orariDirty = true; aggiornaOrariCount();
+}
+// Legge le chiusure dall'editor: scarta righe senza "Dal"; "Al" vuoto => stesso giorno.
+function chiusureDaEditor() {
+  return [...document.querySelectorAll('#chiusureEditor .chiusura-row')].map(row => {
+    const da = row.querySelector('.ch-da').value;
+    if (!da) return null;
+    const a = row.querySelector('.ch-a').value || da;
+    const nota = row.querySelector('.ch-nota').value.trim();
+    const out = { da, a: a < da ? da : a };   // se Al < Dal, lo riallinea a Dal
+    if (nota) out.nota = nota;
+    return out;
+  }).filter(Boolean);
+}
+function aggiornaOrariCount() {
+  const o = orariDaEditor();
+  const aperti = GIORNI_ORDINE.filter(([g]) => o[g]).length;
+  const nch = chiusureDaEditor().length;
+  document.getElementById('orariCount').textContent =
+    `${aperti} giorni aperti · ${nch} chiusur${nch === 1 ? 'a' : 'e'}${orariDirty ? ' · NON salvati' : ''}`;
+}
+async function salvaOrari() {
+  const token = getToken();
+  if (!token) { alert('Inserisci prima il GitHub Token (campo in alto nell\'editor).'); return; }
+  const btn = document.getElementById('orariSaveBtn');
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    CONTENUTI.orari = orariDaEditor();        // preserva eventuali altre chiavi (servizi, annunci…)
+    CONTENUTI.chiusure = chiusureDaEditor();  // chiusure straordinarie / ferie
+    const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { [CONTENUTI_FILE]: { content: JSON.stringify(CONTENUTI, null, 2) } } })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    orariDirty = false; aggiornaOrariCount();
+    alert('✓ Orari salvati sul Gist. La bacheca li userà entro 5 minuti.');
   } catch (e) {
     alert('⚠ Errore salvataggio: ' + e.message);
   }
