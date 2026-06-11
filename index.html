@@ -610,6 +610,13 @@ function parseIntervalli(str) {
   }).filter(Boolean);
 }
 function fmtMin(m) { return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0'); }
+// Chiusura straordinaria / ferie attiva oggi (contenuti.json -> chiusure: [{da, a, nota}]).
+// Ritorna la prima che copre la data (da <= oggi <= a; "a" assente = solo "da"), o null.
+function chiusuraOggi(d) {
+  const lista = Array.isArray(CONTENUTI.chiusure) ? CONTENUTI.chiusure : [];
+  const k = toKey(d);
+  return lista.find(c => c && c.da && c.da <= k && (c.a || c.da) >= k) || null;
+}
 // Stato di apertura adesso: { aperto, fino? (min di chiusura), prossima? (min di apertura di oggi) }.
 function statoApertura(now) {
   const orari = getOrariSettimana();
@@ -640,6 +647,14 @@ function renderOrari() {
       el.textContent = '🟢 ' + L[0] + ' · ' + L[2] + ' ' + sc.fine;
       return;
     }
+  }
+  // Chiusura straordinaria / ferie: se oggi rientra in un intervallo, forza "Chiusa"
+  // (con eventuale nota, es. "Ferie") a prescindere dalla tabella oraria settimanale.
+  const ch = chiusuraOggi(new Date());
+  if (ch) {
+    el.classList.add('chiusa'); el.classList.remove('aperta');
+    el.textContent = '🔴 ' + L[1] + (ch.nota ? ' · ' + ch.nota : '');
+    return;
   }
   const st = statoApertura(new Date());
   el.classList.toggle('aperta', st.aperto);

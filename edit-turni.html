@@ -211,7 +211,16 @@
   <div style="padding:9px 12px;font-size:12px;color:#555;background:#f7faf8;border-bottom:1px solid #e0e8e2;">
     Orari della <b>nostra</b> farmacia (Via Fiume 75): alimentano il badge <b>“Aperta ora / Chiusa”</b> in cima alla bacheca. Formato <code>08:30-19:30</code>; per l'orario spezzato usa la virgola: <code>08:30-12:30, 15:30-19:30</code>. Lascia <b>vuoto</b> un giorno di chiusura.
   </div>
-  <div id="orariEditor" style="flex:1;min-height:0;overflow:auto;padding:14px 12px;background:#f5f7f5;"></div>
+  <div style="flex:1;min-height:0;overflow:auto;background:#f5f7f5;">
+    <div id="orariEditor" style="padding:14px 12px;"></div>
+    <div style="padding:9px 12px;font-size:12px;color:#555;background:#fff;border-top:1px solid #e0e8e2;border-bottom:1px solid #e0e8e2;">
+      <b>📅 Chiusure straordinarie / ferie</b> — giorni in cui la farmacia è chiusa a prescindere dagli orari qui sopra (il badge in bacheca diventa <b>“Chiusa”</b>). Per un solo giorno metti la stessa data in “Dal” e “Al”. La nota (es. <i>Ferie</i>) compare accanto al badge. Se siete <b>di turno</b> quel giorno il turno vince e restate aperti.
+    </div>
+    <div id="chiusureEditor" style="padding:10px 12px;"></div>
+    <div style="padding:0 12px 16px;">
+      <button onclick="aggiungiChiusura()" style="background:#3949ab;color:#fff;border:none;border-radius:6px;padding:10px 14px;font-size:14px;font-weight:700;cursor:pointer;width:100%;">+ Aggiungi chiusura</button>
+    </div>
+  </div>
 </div>
 
 <!-- PANNELLO ANNUNCI (comunicazioni mostrate in bacheca) -->
@@ -838,6 +847,10 @@ function apriOrari() {
     row.appendChild(lab); row.appendChild(inp);
     ed.appendChild(row);
   });
+  // Chiusure straordinarie / ferie (contenuti.json -> chiusure: [{da, a, nota}]).
+  const ced = document.getElementById('chiusureEditor');
+  ced.innerHTML = '';
+  (Array.isArray(CONTENUTI.chiusure) ? CONTENUTI.chiusure : []).forEach(c => ced.appendChild(buildChiusuraRow(c)));
   orariDirty = false;
   aggiornaOrariCount();
   document.getElementById('orariOverlay').style.display = 'flex';
@@ -851,11 +864,50 @@ function orariDaEditor() {
   GIORNI_ORDINE.forEach(([g]) => { out[g] = (document.getElementById('orariGiorno' + g).value || '').trim(); });
   return out;
 }
+// Una riga di chiusura: Dal / Al (date) + nota + elimina. "Al" vuoto = un solo giorno.
+function buildChiusuraRow(c) {
+  c = c || {};
+  const row = document.createElement('div');
+  row.className = 'chiusura-row';
+  row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;';
+  const stile = 'padding:8px 9px;border:1px solid #ccc;border-radius:6px;font-size:14px;font-family:inherit;';
+  row.innerHTML =
+    `<label style="font-weight:700;color:#333;">Dal</label>` +
+    `<input type="date" class="ch-da" value="${c.da || ''}" style="${stile}">` +
+    `<label style="font-weight:700;color:#333;">Al</label>` +
+    `<input type="date" class="ch-a" value="${c.a || ''}" style="${stile}">` +
+    `<input type="text" class="ch-nota" value="${(c.nota || '').replace(/"/g, '&quot;')}" placeholder="Nota (es. Ferie)" style="flex:1;min-width:120px;${stile}">`;
+  const del = document.createElement('button');
+  del.textContent = '🗑';
+  del.style.cssText = 'background:#c62828;color:#fff;border:none;border-radius:6px;padding:8px 12px;font-size:14px;cursor:pointer;';
+  del.onclick = () => { row.remove(); orariDirty = true; aggiornaOrariCount(); };
+  row.appendChild(del);
+  row.querySelectorAll('input').forEach(el =>
+    el.addEventListener('input', () => { orariDirty = true; aggiornaOrariCount(); }));
+  return row;
+}
+function aggiungiChiusura() {
+  document.getElementById('chiusureEditor').appendChild(buildChiusuraRow({}));
+  orariDirty = true; aggiornaOrariCount();
+}
+// Legge le chiusure dall'editor: scarta righe senza "Dal"; "Al" vuoto => stesso giorno.
+function chiusureDaEditor() {
+  return [...document.querySelectorAll('#chiusureEditor .chiusura-row')].map(row => {
+    const da = row.querySelector('.ch-da').value;
+    if (!da) return null;
+    const a = row.querySelector('.ch-a').value || da;
+    const nota = row.querySelector('.ch-nota').value.trim();
+    const out = { da, a: a < da ? da : a };   // se Al < Dal, lo riallinea a Dal
+    if (nota) out.nota = nota;
+    return out;
+  }).filter(Boolean);
+}
 function aggiornaOrariCount() {
   const o = orariDaEditor();
   const aperti = GIORNI_ORDINE.filter(([g]) => o[g]).length;
+  const nch = chiusureDaEditor().length;
   document.getElementById('orariCount').textContent =
-    `${aperti} giorni aperti${orariDirty ? ' · NON salvati' : ''}`;
+    `${aperti} giorni aperti · ${nch} chiusur${nch === 1 ? 'a' : 'e'}${orariDirty ? ' · NON salvati' : ''}`;
 }
 async function salvaOrari() {
   const token = getToken();
@@ -863,7 +915,8 @@ async function salvaOrari() {
   const btn = document.getElementById('orariSaveBtn');
   btn.disabled = true; btn.textContent = '⏳';
   try {
-    CONTENUTI.orari = orariDaEditor();   // preserva eventuali altre chiavi (servizi, annunci…)
+    CONTENUTI.orari = orariDaEditor();        // preserva eventuali altre chiavi (servizi, annunci…)
+    CONTENUTI.chiusure = chiusureDaEditor();  // chiusure straordinarie / ferie
     const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
       method: 'PATCH',
       headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' },
