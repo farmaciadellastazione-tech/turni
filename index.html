@@ -624,6 +624,23 @@ function renderOrari() {
   const el = document.getElementById('orariTag');
   if (!el) return;
   const L = I18N_APERTURA[LANG] || I18N_APERTURA.it;
+  // Il turno vince sull'orario ordinario: se ADESSO la farmacia di turno (24h) siamo noi
+  // siamo aperti comunque, anche di domenica/festivo (la tabella oraria li darebbe per
+  // chiusi). Idem se siamo il conturno ed è nella sua fascia di apertura.
+  const { turno, key } = getTurnoAttivo();
+  if (turno && turno.t === 'Della Stazione') {
+    el.classList.add('aperta'); el.classList.remove('chiusa');
+    el.textContent = '🟢 ' + (I18N_ORARIO[LANG] || I18N_ORARIO.it)[0];  // "aperta 24h"
+    return;
+  }
+  if (turno && turno.c === 'Della Stazione') {
+    const sc = statoConturno(key);
+    if (sc.aperto) {
+      el.classList.add('aperta'); el.classList.remove('chiusa');
+      el.textContent = '🟢 ' + L[0] + ' · ' + L[2] + ' ' + sc.fine;
+      return;
+    }
+  }
   const st = statoApertura(new Date());
   el.classList.toggle('aperta', st.aperto);
   el.classList.toggle('chiusa', !st.aperto);
