@@ -1,7 +1,10 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" translate="no">
 <head>
 <meta charset="UTF-8">
+<!-- Bacheca già multilingue (switcher proprio): impedisce al browser del kiosk (Chrome)
+     di proporre la barra "Traduci questa pagina", superflua e fuori contesto sul totem. -->
+<meta name="google" content="notranslate">
 <!-- Kiosk touch: blocca lo zoom da gesto (pinch / doppio-tap) per non far "uscire di scala"
      lo schermo durante la pulizia. user-scalable=no + maximum-scale lo impediscono. -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
