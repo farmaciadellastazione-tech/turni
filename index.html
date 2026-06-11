@@ -20,7 +20,10 @@
   .header-right { text-align: right; }
   .clock-time { font-size: 30px; font-weight: 700; color: #1a1a1a; line-height: 1; letter-spacing: 1px; }
   .clock-date { font-size: 11px; color: #666; margin-top: 2px; text-transform: capitalize; }
-  .orari-tag { font-size: 11px; color: #2e7d4f; font-weight: 600; margin-top: 3px; }
+  /* Badge "Aperta ora / Chiusa" della nostra farmacia (orari editabili dal Gist). */
+  .orari-tag { display: inline-block; font-size: 11px; font-weight: 700; margin-top: 4px; padding: 2px 9px; border-radius: 10px; }
+  .orari-tag.aperta { color: #1b5e34; background: #e3f3ea; }
+  .orari-tag.chiusa { color: #a32020; background: #fbe6e6; }
   .lang-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
   .lang-btn { width: 34px; height: 25px; padding: 0; border: 2px solid transparent; border-radius: 4px; background: none; cursor: pointer; overflow: hidden; line-height: 0; opacity: 0.5; transition: opacity .15s, border-color .15s; font-size: 11px; font-weight: 700; color: #555; }
   .lang-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -413,6 +416,25 @@ const I18N_SAT = {
   uk:'Відчинено в суботу пополудні', ru:'Открыто в субботу днём', bn:'শনিবার বিকেলে খোলা',
   hi:'शनिवार दोपहर को खुला', ja:'土曜午後営業', ko:'토요일 오후 영업'
 };
+// Badge apertura della NOSTRA farmacia: [aperta ora, chiusa, "chiude" (verbo), "apre" (verbo)].
+const I18N_APERTURA = {
+  it: ['Aperta ora','Chiusa','chiude','apre'],
+  en: ['Open now','Closed','closes','opens'],
+  fr: ['Ouverte','Fermée','ferme','ouvre'],
+  es: ['Abierta','Cerrada','cierra','abre'],
+  de: ['Geöffnet','Geschlossen','schließt','öffnet'],
+  pt: ['Aberta','Fechada','fecha','abre'],
+  zh: ['营业中','已关闭','关门','开门'],
+  ar: ['مفتوحة الآن','مغلقة','تغلق','تفتح'],
+  ro: ['Deschisă','Închisă','închide','deschide'],
+  sq: ['Hapur','Mbyllur','mbyll','hap'],
+  uk: ['Відчинено','Зачинено','зачиняється','відчиняється'],
+  ru: ['Открыто','Закрыто','закрывается','открывается'],
+  bn: ['খোলা','বন্ধ','বন্ধ হয়','খোলে'],
+  hi: ['खुला','बंद','बंद होता','खुलता'],
+  ja: ['営業中','閉店','閉店','開店'],
+  ko: ['영업 중','영업 종료','마감','오픈']
+};
 let LANG = 'it';
 let langResetTimer = null;
 function t(k) { return (I18N[LANG] && I18N[LANG][k]) || I18N.it[k] || k; }
@@ -428,7 +450,7 @@ function applyLang() {
   document.getElementById('barUpcoming').textContent = t('upcoming');
   document.getElementById('serviziTitle').textContent = '• ' + t('services') + ' •';
   document.getElementById('annunciTitle').textContent = '• ' + t('communications') + ' •';
-  document.getElementById('orariTag').textContent = t('weekRange') + ': 08:30–19:30';
+  renderOrari();
   document.getElementById('footerLegal').textContent = t('legal');
   const q = I18N_QR[LANG] || I18N_QR.it;
   document.getElementById('qrTitle').textContent = q[0];
@@ -569,6 +591,45 @@ function updateClock() {
   document.getElementById('clockDate').textContent = fmtDate(now);
   document.getElementById('footerClock').textContent =
     String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear()+' '+t;
+  renderOrari();
+}
+
+// --- Orari di apertura della NOSTRA farmacia (editabili dal Gist contenuti.json -> orari).
+// Chiave = giorno di getDay() (0=Dom … 6=Sab); valore = stringa di intervalli "HH:MM-HH:MM"
+// separati da virgola (vuoto = chiusa). Da questi si calcola il badge "Aperta ora / Chiusa". ---
+const ORARI_DEFAULT = { 0:'', 1:'08:30-19:30', 2:'08:30-19:30', 3:'08:30-19:30', 4:'08:30-19:30', 5:'08:30-19:30', 6:'08:30-19:30' };
+function getOrariSettimana() {
+  const o = CONTENUTI.orari;
+  return (o && typeof o === 'object' && !Array.isArray(o)) ? o : ORARI_DEFAULT;
+}
+// "08:30-12:30, 15:30-19:30" -> [[510,750],[930,1170]] (minuti dall'inizio giornata)
+function parseIntervalli(str) {
+  return String(str || '').split(',').map(s => s.trim()).filter(Boolean).map(seg => {
+    const m = seg.match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
+    return m ? [(+m[1])*60 + (+m[2]), (+m[3])*60 + (+m[4])] : null;
+  }).filter(Boolean);
+}
+function fmtMin(m) { return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m % 60).padStart(2,'0'); }
+// Stato di apertura adesso: { aperto, fino? (min di chiusura), prossima? (min di apertura di oggi) }.
+function statoApertura(now) {
+  const orari = getOrariSettimana();
+  const min = now.getHours()*60 + now.getMinutes();
+  const oggi = parseIntervalli(orari[now.getDay()]);
+  for (const [a, b] of oggi) if (min >= a && min < b) return { aperto:true, fino:b };
+  const prossime = oggi.map(([a]) => a).filter(a => a > min).sort((x,y) => x-y);
+  return { aperto:false, prossima: prossime.length ? prossime[0] : null };
+}
+// Badge in header: verde "Aperta ora · chiude HH:MM" / rosso "Chiusa · apre HH:MM" (o solo "Chiusa").
+function renderOrari() {
+  const el = document.getElementById('orariTag');
+  if (!el) return;
+  const L = I18N_APERTURA[LANG] || I18N_APERTURA.it;
+  const st = statoApertura(new Date());
+  el.classList.toggle('aperta', st.aperto);
+  el.classList.toggle('chiusa', !st.aperto);
+  if (st.aperto) el.textContent = '🟢 ' + L[0] + ' · ' + L[2] + ' ' + fmtMin(st.fino);
+  else if (st.prossima != null) el.textContent = '🔴 ' + L[1] + ' · ' + L[3] + ' ' + fmtMin(st.prossima);
+  else el.textContent = '🔴 ' + L[1];
 }
 
 function renderContactInto(el, nome) {
@@ -956,7 +1017,7 @@ function pianificaSpot() {
 // Tap/click sull'overlay: chiude subito e fa ripartire l'intervallo.
 function chiudiSpotManuale() { clearTimeout(spotTimer); nascondiSpot(); pianificaSpot(); }
 
-function renderAll() { renderToday(); renderNext(); renderMappa(); renderServizi(); renderAnnunci(); }
+function renderAll() { renderToday(); renderNext(); renderMappa(); renderServizi(); renderAnnunci(); renderOrari(); }
 
 function scheduleReload() {
   const now = new Date();
