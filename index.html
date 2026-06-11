@@ -27,6 +27,10 @@
   .orari-tag { display: inline-block; font-size: 11px; font-weight: 700; margin-top: 4px; padding: 2px 9px; border-radius: 10px; }
   .orari-tag.aperta { color: #1b5e34; background: #e3f3ea; }
   .orari-tag.chiusa { color: #a32020; background: #fbe6e6; }
+  /* Avviso diritto di chiamata notturno (banner rosso sotto la farmacia di turno, di notte). */
+  .notte-banner { background: #c0392b; color: #fff; padding: 13px 18px; flex-shrink: 0; text-align: center; border-top: 3px solid rgba(255,255,255,.25); }
+  .notte-banner .nb-amount { display: block; font-size: 24px; font-weight: 800; line-height: 1.15; }
+  .notte-banner .nb-sub { display: block; font-size: 13px; opacity: .92; margin-top: 3px; }
   .lang-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
   .lang-btn { width: 34px; height: 25px; padding: 0; border: 2px solid transparent; border-radius: 4px; background: none; cursor: pointer; overflow: hidden; line-height: 0; opacity: 0.5; transition: opacity .15s, border-color .15s; font-size: 11px; font-weight: 700; color: #555; }
   .lang-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -202,6 +206,9 @@
     <div class="left">
       <div class="section-bar" id="barOnDuty">Farmacia di turno</div>
       <div class="turno-main"><div class="turno-list" id="turnoList"></div></div>
+      <!-- Avviso diritto di chiamata notturno: solo nelle notti di turno, dopo mezzanotte
+           e fino alla fine turno (08:30). Vedi renderNotte(). -->
+      <div class="notte-banner" id="notteBanner" style="display:none"></div>
       <div class="section-bar" id="barUpcoming">Prossimi turni</div>
       <div class="prossimi"><div class="next-list" id="nextList"></div></div>
       <!-- Social: visibile solo su mobile (vedi isMobile()); sul kiosk i link sono nascosti
@@ -438,6 +445,25 @@ const I18N_APERTURA = {
   ja: ['営業中','閉店','閉店','開店'],
   ko: ['영업 중','영업 종료','마감','오픈']
 };
+// Avviso notturno: [titolo con importo, sottotitolo]. Mostrato di notte sotto la farmacia di turno.
+const I18N_NOTTE = {
+  it: ['📞 Di notte la chiamata costa €10,00', 'Servizio a battenti chiusi solo per medicinali urgenti'],
+  en: ['📞 Night call fee: €10.00', 'Closed-door service for urgent medicines only'],
+  fr: ['📞 Appel de nuit : 10,00 €', 'Service à porte fermée, médicaments urgents uniquement'],
+  es: ['📞 Llamada nocturna: 10,00 €', 'Servicio a puerta cerrada solo para medicamentos urgentes'],
+  de: ['📞 Nachtruf: 10,00 €', 'Notdienst bei geschlossener Tür, nur dringende Medikamente'],
+  pt: ['📞 Chamada noturna: 10,00 €', 'Serviço de porta fechada apenas para medicamentos urgentes'],
+  zh: ['📞 夜间呼叫费：€10.00', '闭门服务，仅限急用药品'],
+  ar: ['📞 رسوم الاتصال الليلي: €10.00', 'الخدمة عبر الباب المغلق للأدوية العاجلة فقط'],
+  ro: ['📞 Apel de noapte: 10,00 €', 'Serviciu cu ușa închisă, doar medicamente urgente'],
+  sq: ['📞 Thirrja e natës: 10,00 €', 'Shërbim me derë të mbyllur, vetëm barna urgjente'],
+  uk: ['📞 Нічний виклик: €10,00', 'Обслуговування за зачиненими дверима, лише невідкладні ліки'],
+  ru: ['📞 Ночной вызов: €10,00', 'Обслуживание при закрытых дверях, только срочные лекарства'],
+  bn: ['📞 রাতের কল: €10.00', 'বন্ধ দরজার সেবা, শুধুমাত্র জরুরি ওষুধ'],
+  hi: ['📞 रात्रि कॉल शुल्क: €10.00', 'बंद दरवाज़े की सेवा, केवल आपातकालीन दवाएँ'],
+  ja: ['📞 夜間の呼び出し料金：€10.00', '閉店時の対応は緊急の医薬品のみ'],
+  ko: ['📞 야간 호출료: €10.00', '닫힌 문 서비스, 긴급 의약품만']
+};
 let LANG = 'it';
 let langResetTimer = null;
 function t(k) { return (I18N[LANG] && I18N[LANG][k]) || I18N.it[k] || k; }
@@ -595,6 +621,7 @@ function updateClock() {
   document.getElementById('footerClock').textContent =
     String(now.getDate()).padStart(2,'0')+'/'+String(now.getMonth()+1).padStart(2,'0')+'/'+now.getFullYear()+' '+t;
   renderOrari();
+  renderNotte();
 }
 
 // --- Orari di apertura della NOSTRA farmacia (editabili dal Gist contenuti.json -> orari).
@@ -665,6 +692,23 @@ function renderOrari() {
   if (st.aperto) el.textContent = '🟢 ' + L[0] + ' · ' + L[2] + ' ' + fmtMin(st.fino);
   else if (st.prossima != null) el.textContent = '🔴 ' + L[1] + ' · ' + L[3] + ' ' + fmtMin(st.prossima);
   else el.textContent = '🔴 ' + L[1];
+}
+
+// Avviso diritto di chiamata notturno: solo nelle notti di turno, dopo mezzanotte e prima
+// della fine turno (08:30) — chi suona/chiama la farmacia di turno paga €10,00. Niente
+// banner se non c'è farmacia di turno.
+function renderNotte() {
+  const el = document.getElementById('notteBanner');
+  if (!el) return;
+  const now = new Date();
+  const min = now.getHours()*60 + now.getMinutes();
+  const { turno } = getTurnoAttivo();
+  if (min >= 8*60 + 30 || !turno || !turno.t) { el.style.display = 'none'; return; }
+  const L = I18N_NOTTE[LANG] || I18N_NOTTE.it;
+  el.innerHTML = '<span class="nb-amount"></span><span class="nb-sub"></span>';
+  el.querySelector('.nb-amount').textContent = L[0];
+  el.querySelector('.nb-sub').textContent = L[1];
+  el.style.display = '';
 }
 
 function renderContactInto(el, nome) {
@@ -1052,7 +1096,7 @@ function pianificaSpot() {
 // Tap/click sull'overlay: chiude subito e fa ripartire l'intervallo.
 function chiudiSpotManuale() { clearTimeout(spotTimer); nascondiSpot(); pianificaSpot(); }
 
-function renderAll() { renderToday(); renderNext(); renderMappa(); renderServizi(); renderAnnunci(); renderOrari(); }
+function renderAll() { renderToday(); renderNext(); renderMappa(); renderServizi(); renderAnnunci(); renderOrari(); renderNotte(); }
 
 function scheduleReload() {
   const now = new Date();
