@@ -97,6 +97,18 @@
   .servizi-title { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #7ec8a0; margin-bottom: 8px; }
   .servizi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
   .servizio-item { background: #2e7d4f; border-radius: 4px; padding: 5px 8px; font-size: 11px; font-weight: 700; text-align: center; color: #fff; }
+  /* Orari di apertura della NOSTRA farmacia: tabella settimanale sempre visibile (per legge
+     va esposta all'esterno). Stesso tema verde del box servizi. La riga del giorno corrente
+     è evidenziata. Dati editabili dal Gist (contenuti.json -> orari). */
+  .orari-box { background: #1a3a28; color: #fff; padding: 12px 14px; flex-shrink: 0; border-top: 1px solid #2e7d4f; }
+  .orari-box-title { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #7ec8a0; margin-bottom: 8px; }
+  .orari-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 13px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .orari-row:last-child { border-bottom: none; }
+  .orari-row .g { font-weight: 700; color: #cfe9da; }
+  .orari-row .h { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+  .orari-row .h.chiuso { color: #f0a0a0; font-style: italic; }
+  .orari-row.oggi { background: rgba(126,200,160,0.14); margin: 0 -8px; padding: 3px 8px; border-radius: 5px; border-bottom-color: transparent; }
+  .orari-row.oggi .g { color: #fff; }
   /* Banner annunci: stessa estetica del banner di galenico (DM Mono, palette calda, centrato) */
   /* Fascia annunci in evidenza: testo a scorrimento (ticker). Il testo scorre da destra
      a sinistra; la durata è impostata in JS per velocità ~costante su ogni risoluzione. */
@@ -235,6 +247,12 @@
       <div class="servizi-box" id="serviziBox">
         <div class="servizi-title" id="serviziTitle">• Servizi •</div>
         <div class="servizi-grid" id="serviziGrid"></div>
+      </div>
+      <!-- Orari di apertura della farmacia: tabella settimanale obbligatoria, sempre visibile.
+           Riempita da renderOrariSettimana() leggendo contenuti.json -> orari (con default). -->
+      <div class="orari-box" id="orariBox">
+        <div class="orari-box-title" id="orariBoxTitle">Orari di apertura</div>
+        <div id="orariList"></div>
       </div>
       <div class="annunci-box" id="annunciBox" style="display:none">
         <div class="annunci-box-title" id="annunciTitle">• Comunicazioni •</div>
@@ -444,6 +462,44 @@ const I18N_APERTURA = {
   hi: ['खुला','बंद','बंद होता','खुलता'],
   ja: ['営業中','閉店','閉店','開店'],
   ko: ['영업 중','영업 종료','마감','오픈']
+};
+// Nomi brevi dei giorni, indicizzati come getDay() (0=Dom … 6=Sab). Per la tabella oraria.
+const I18N_GIORNI = {
+  it: ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'],
+  en: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+  fr: ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'],
+  es: ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],
+  de: ['So','Mo','Di','Mi','Do','Fr','Sa'],
+  pt: ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'],
+  zh: ['周日','周一','周二','周三','周四','周五','周六'],
+  ar: ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'],
+  ro: ['Dum','Lun','Mar','Mie','Joi','Vin','Sâm'],
+  sq: ['Die','Hën','Mar','Mër','Enj','Pre','Sht'],
+  uk: ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'],
+  ru: ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'],
+  bn: ['রবি','সোম','মঙ্গল','বুধ','বৃহ','শুক্র','শনি'],
+  hi: ['रवि','सोम','मंगल','बुध','गुरु','शुक्र','शनि'],
+  ja: ['日','月','火','水','木','金','土'],
+  ko: ['일','월','화','수','목','금','토']
+};
+// Tabella oraria: [titolo box, etichetta "chiuso"].
+const I18N_ORARI_BOX = {
+  it: ['Orari di apertura','chiuso'],
+  en: ['Opening hours','closed'],
+  fr: ["Horaires d'ouverture",'fermé'],
+  es: ['Horario de apertura','cerrado'],
+  de: ['Öffnungszeiten','geschlossen'],
+  pt: ['Horário de abertura','fechado'],
+  zh: ['营业时间','休息'],
+  ar: ['ساعات العمل','مغلق'],
+  ro: ['Program','închis'],
+  sq: ['Orari i hapjes','mbyllur'],
+  uk: ['Години роботи','зачинено'],
+  ru: ['Часы работы','закрыто'],
+  bn: ['খোলার সময়','বন্ধ'],
+  hi: ['खुलने का समय','बंद'],
+  ja: ['営業時間','休業'],
+  ko: ['영업 시간','휴무']
 };
 // Avviso notturno: [titolo con importo, sottotitolo]. Mostrato di notte sotto la farmacia di turno.
 const I18N_NOTTE = {
@@ -692,6 +748,44 @@ function renderOrari() {
   if (st.aperto) el.textContent = '🟢 ' + L[0] + ' · ' + L[2] + ' ' + fmtMin(st.fino);
   else if (st.prossima != null) el.textContent = '🔴 ' + L[1] + ' · ' + L[3] + ' ' + fmtMin(st.prossima);
   else el.textContent = '🔴 ' + L[1];
+}
+
+// Orario di un giorno normalizzato: "08:30–12:30, 15:30–19:30" (en-dash), o null se chiuso.
+function formatOrarioGiorno(str) {
+  const segs = parseIntervalli(str);
+  return segs.length ? segs.map(([a, b]) => fmtMin(a) + '–' + fmtMin(b)).join(', ') : null;
+}
+// Tabella oraria settimanale (box sotto la mappa). Giorni Lun→Dom; i giorni consecutivi
+// con lo stesso orario sono raggruppati ("Lun–Ven"). La riga di oggi è evidenziata.
+function renderOrariSettimana() {
+  const list = document.getElementById('orariList');
+  const title = document.getElementById('orariBoxTitle');
+  if (!list || !title) return;
+  const G = I18N_GIORNI[LANG] || I18N_GIORNI.it;
+  const B = I18N_ORARI_BOX[LANG] || I18N_ORARI_BOX.it;
+  title.textContent = B[0];
+  const orari = getOrariSettimana();
+  const oggi = new Date().getDay();
+  // Ordine di visualizzazione: lunedì → domenica (getDay 1..6, poi 0).
+  const days = [1, 2, 3, 4, 5, 6, 0].map(d => ({ dow: d, txt: formatOrarioGiorno(orari[d]) }));
+  // Raggruppa giorni consecutivi con lo stesso orario.
+  const groups = [];
+  days.forEach(d => {
+    const last = groups[groups.length - 1];
+    if (last && last.txt === d.txt) last.days.push(d.dow);
+    else groups.push({ txt: d.txt, days: [d.dow] });
+  });
+  list.innerHTML = '';
+  groups.forEach(g => {
+    const row = document.createElement('div');
+    row.className = 'orari-row' + (g.days.includes(oggi) ? ' oggi' : '');
+    const lbl = g.days.length > 1 ? G[g.days[0]] + '–' + G[g.days[g.days.length - 1]] : G[g.days[0]];
+    const span = document.createElement('span'); span.className = 'g'; span.textContent = lbl;
+    const hrs = document.createElement('span'); hrs.className = 'h' + (g.txt ? '' : ' chiuso');
+    hrs.textContent = g.txt || B[1];
+    row.appendChild(span); row.appendChild(hrs);
+    list.appendChild(row);
+  });
 }
 
 // Avviso diritto di chiamata notturno: solo nelle notti di turno, dopo mezzanotte e prima
@@ -1096,7 +1190,7 @@ function pianificaSpot() {
 // Tap/click sull'overlay: chiude subito e fa ripartire l'intervallo.
 function chiudiSpotManuale() { clearTimeout(spotTimer); nascondiSpot(); pianificaSpot(); }
 
-function renderAll() { renderToday(); renderNext(); renderMappa(); renderServizi(); renderAnnunci(); renderOrari(); renderNotte(); }
+function renderAll() { renderToday(); renderNext(); renderMappa(); renderServizi(); renderAnnunci(); renderOrari(); renderOrariSettimana(); renderNotte(); }
 
 function scheduleReload() {
   const now = new Date();
