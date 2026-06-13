@@ -88,9 +88,10 @@
   .next-cont { font-size: 10px; color: #2e7d4f; }
   .next-mod { font-size: 10px; color: #e65100; font-weight: 600; }
   .right { display: flex; flex-direction: column; min-height: 0; overflow: hidden; border-left: 2px solid #2e7d4f; background: #fff; }
-  /* La mappa non deve restare schiacciata: ha una soglia minima. Se lo spazio non basta
-     (viewport basso), è la colonna (.right overflow:hidden) a tagliare l'ultimo QR in
-     fondo, non la mappa. Sul kiosk alto c'è posto per mappa grande + servizi + 3 QR. */
+  /* La mappa è in fondo alla colonna e cresce (flex:1) per riempire lo spazio rimasto.
+     Servizi e QR stanno in alto e sono sempre visibili; se lo spazio non basta (viewport
+     basso) è la mappa in fondo a essere tagliata dall'overflow:hidden della colonna, non i
+     QR. Ha comunque una soglia minima. Sul kiosk alto c'è posto per servizi + 3 QR + mappa. */
   .map-area { flex: 1; min-height: 320px; overflow: hidden; }
   .map-iframe { width: 100%; height: 100%; border: none; }
   .servizi-box { background: #1a3a28; color: #fff; padding: 12px 14px; flex-shrink: 0; }
@@ -241,25 +242,14 @@
       </div>
     </div>
     <div class="right">
-      <div class="map-area">
-        <div id="map" style="width:100%;height:100%;"></div>
-      </div>
       <div class="servizi-box" id="serviziBox">
         <div class="servizi-title" id="serviziTitle">• Servizi •</div>
         <div class="servizi-grid" id="serviziGrid"></div>
       </div>
-      <!-- Orari di apertura della farmacia: tabella settimanale obbligatoria, sempre visibile.
-           Riempita da renderOrariSettimana() leggendo contenuti.json -> orari (con default). -->
-      <div class="orari-box" id="orariBox">
-        <div class="orari-box-title" id="orariBoxTitle">Orari di apertura</div>
-        <div id="orariList"></div>
-      </div>
-      <div class="annunci-box" id="annunciBox" style="display:none">
-        <div class="annunci-box-title" id="annunciTitle">• Comunicazioni •</div>
-        <div id="annunciList"></div>
-      </div>
       <!-- I 3 QR in un'unica riga (vedi .qr-row nel CSS). Tutta la riga è nascosta su
-           mobile da renderQR: chi è già al telefono non ne ha bisogno. -->
+           mobile da renderQR: chi è già al telefono non ne ha bisogno.
+           Posizionati in alto (subito sotto i servizi) così restano sempre ben visibili
+           e a portata di scansione: la mappa, che cresce, è spostata in fondo. -->
       <div class="qr-row" id="qrRow" style="display:none">
         <!-- QR bacheca: apre questo stesso sito sul telefono (installabile come PWA). -->
         <div class="qr-box" id="qrBoxTurni">
@@ -286,6 +276,19 @@
             <div class="qr-sub" id="qrSubApp">Scansiona dallo scanner dell’app</div>
           </div>
         </div>
+      </div>
+      <!-- Orari di apertura della farmacia: tabella settimanale obbligatoria, sempre visibile.
+           Riempita da renderOrariSettimana() leggendo contenuti.json -> orari (con default). -->
+      <div class="orari-box" id="orariBox">
+        <div class="orari-box-title" id="orariBoxTitle">Orari di apertura</div>
+        <div id="orariList"></div>
+      </div>
+      <div class="annunci-box" id="annunciBox" style="display:none">
+        <div class="annunci-box-title" id="annunciTitle">• Comunicazioni •</div>
+        <div id="annunciList"></div>
+      </div>
+      <div class="map-area">
+        <div id="map" style="width:100%;height:100%;"></div>
       </div>
     </div>
   </div>
