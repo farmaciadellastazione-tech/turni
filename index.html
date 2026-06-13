@@ -156,6 +156,25 @@
   .spot-overlay.visibile { opacity: 1; visibility: visible; }
   .spot-img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
   .spot-testo { font-family: 'Segoe UI', Arial, sans-serif; font-weight: 800; font-size: 6vw; line-height: 1.2; text-align: center; padding: 5vw; }
+  /* ---- Vista mobile (telefono): bacheca snella. Scatta SOLO su schermi stretti, quindi il
+     totem (ampio, alta risoluzione) non è toccato. Mostra l'essenziale — farmacia di turno +
+     contatti + prossimi turni/sabato — e nasconde la colonna destra (servizi/orari/mappa/QR).
+     La pagina, sul kiosk bloccata (overflow:hidden, touch-action:none), qui torna scrollabile. */
+  @media (max-width: 768px) {
+    html, body { height: auto; overflow-x: hidden; overflow-y: auto; touch-action: pan-y; }
+    .page { height: auto; min-height: 100vh; }
+    /* Header: le bandierine vanno su una riga propria sotto nome+orologio (niente sovrapposizioni). */
+    .header { flex-wrap: wrap; row-gap: 8px; padding: 10px 14px; }
+    .header-left { flex: 1 1 auto; min-width: 0; }
+    .header-right { flex-shrink: 0; }
+    .lang-bar { order: 3; width: 100%; }
+    .farm-name { font-size: 20px; }
+    /* Corpo a colonna singola: resta solo la sinistra (turno + prossimi/sabato + social). */
+    .body { display: block; flex: 0 0 auto; }
+    .left { display: block; overflow: visible; }
+    .right { display: none; }
+    .footer { flex-wrap: wrap; row-gap: 2px; }
+  }
 </style>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2e7d4f">
