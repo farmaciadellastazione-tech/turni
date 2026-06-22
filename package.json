@@ -8,6 +8,8 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "imapflow": "^1.0.0",
+    "mailparser": "^3.0.0",
     "vitest": "^2.1.8"
   },
   "dependencies": {
