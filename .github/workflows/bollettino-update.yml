@@ -1,0 +1,76 @@
+name: Aggiornamento turni da bollettino
+
+# Controlla ogni mattina la casella della farmacia:
+# - se è arrivato un bollettino PDF di Federfarma → aggiorna turni-overrides.json sul Gist
+# - se è arrivato un .doc "SABATO POMERIGGIO"    → aggiorna sabato.json sul Gist
+#
+# Autenticazione: App Password Gmail (GMAIL_USER + GMAIL_APP_PASSWORD).
+# Aggiornamento Gist: token con scope "gist" (GIST_PAT).
+
+on:
+  schedule:
+    - cron: '0 6 * * 1-6'   # lun-sab alle 06:00 UTC (~07/08 in Italia)
+  workflow_dispatch: {}
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Installa dipendenze root (imapflow, mailparser)
+        run: npm ci
+
+      - name: Installa dipendenze tools (pdf-parse)
+        run: npm ci
+        working-directory: tools
+
+      # ── Bollettino settimanale (PDF) ─────────────────────────────────────────
+
+      - name: Cerca l'ultimo bollettino PDF
+        id: fetch_bollettino
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: |
+          set +e
+          node tools/fetch-bollettino-email.mjs .bollettino.pdf
+          code=$?
+          set -e
+          if [ "$code" -eq 3 ]; then echo "found=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "$code" -ne 0 ]; then echo "::error::Fetch bollettino fallito (exit $code)"; exit "$code"; fi
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      - name: Applica bollettino agli override del Gist
+        if: steps.fetch_bollettino.outputs.found == 'true'
+        env:
+          GIST_PAT: ${{ secrets.GIST_PAT }}
+        run: node tools/apply-bollettino.mjs .bollettino.pdf
+
+      # ── Sabato pomeriggio (.doc) ──────────────────────────────────────────────
+
+      - name: Cerca l'ultimo .doc sabato pomeriggio
+        id: fetch_sabato
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: |
+          set +e
+          node tools/fetch-sabato-email.mjs .sabato.doc
+          code=$?
+          set -e
+          if [ "$code" -eq 3 ]; then echo "found=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "$code" -ne 0 ]; then echo "::error::Fetch sabato fallito (exit $code)"; exit "$code"; fi
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      - name: Applica .doc sabato a sabato.json del Gist
+        if: steps.fetch_sabato.outputs.found == 'true'
+        env:
+          GIST_PAT: ${{ secrets.GIST_PAT }}
+        run: node tools/apply-sabato.mjs .sabato.doc
