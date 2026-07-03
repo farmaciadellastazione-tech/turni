@@ -16,6 +16,9 @@
   .token-bar { background: #fff3cd; padding: 10px 16px; display: flex; gap: 8px; align-items: center; }
   .token-bar input { flex: 1; border: 1px solid #ccc; border-radius: 6px; padding: 7px 10px; font-size: 13px; font-family: monospace; }
   .token-bar label { font-size: 12px; font-weight: 600; color: #856404; white-space: nowrap; }
+  .token-bar .token-wrap { flex: 1; position: relative; display: flex; }
+  .token-bar .token-wrap input { padding-right: 34px; }
+  .token-bar .token-eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px 6px; line-height: 1; }
   .status-bar { padding: 8px 16px; font-size: 12px; color: #555; background: #e8f5e9; border-bottom: 1px solid #c8e6c9; min-height: 34px; }
   .month-nav { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: #fff; border-bottom: 1px solid #dde8e0; }
   .month-nav button { background: #f0f4f1; border: 1px solid #ccc; border-radius: 6px; padding: 6px 14px; font-size: 14px; cursor: pointer; }
@@ -76,7 +79,10 @@
 
 <div class="token-bar">
   <label>GitHub Token</label>
-  <input type="password" id="tokenInput" placeholder="github_pat_..." oninput="saveToken(this.value)">
+  <div class="token-wrap">
+    <input type="password" id="tokenInput" placeholder="github_pat_..." oninput="saveToken(this.value)">
+    <button type="button" class="token-eye" id="tokenEye" onclick="toggleTokenVisibility()" title="Mostra/nascondi token">👁</button>
+  </div>
 </div>
 
 <div style="background:#eef4ff;padding:10px 16px;border-bottom:1px solid #d6e2f5;">
@@ -323,6 +329,13 @@ function toKey(d) {
 }
 function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
 function saveToken(v) { localStorage.setItem(TOKEN_KEY, v); }
+function toggleTokenVisibility() {
+  const input = document.getElementById('tokenInput');
+  const eye = document.getElementById('tokenEye');
+  const shown = input.type === 'text';
+  input.type = shown ? 'password' : 'text';
+  eye.textContent = shown ? '👁' : '🙈';
+}
 
 async function loadBase() {
   const yr = new Date().getFullYear();
