@@ -1,3 +1,29 @@
 {
-  "overrides": {}
+  "overrides": {
+    "2026-06-26": {
+      "t": "Tarantola"
+    },
+    "2026-06-27": {
+      "t": "Bergero"
+    },
+    "2026-06-28": {
+      "t": "Argentieri",
+      "c": "Beretta"
+    },
+    "2026-06-29": {
+      "t": "Del Fico"
+    },
+    "2026-06-30": {
+      "t": "Farina"
+    },
+    "2026-07-01": {
+      "t": "Croce Bianca"
+    },
+    "2026-07-02": {
+      "t": "Dell'Aquila"
+    },
+    "2026-07-03": {
+      "t": "Dell'Arsenale"
+    }
+  }
 }
