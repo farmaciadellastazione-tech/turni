@@ -17,10 +17,11 @@ export function allegatiBollettino(oggetto, nomiAllegati) {
   return (nomiAllegati || []).filter(n => /\.pdf$/i.test(n || '') && !/SABATO/i.test(n));
 }
 
-// Doc "SABATO POMERIGGIO": riconosciuti dal nome file, in qualunque mail
-// di Federfarma arrivino (di norma viaggiano con la mail dei turni).
+// Elenco "SABATO POMERIGGIO": riconosciuto dal nome file, in qualunque mail
+// di Federfarma arrivi (di norma viaggia con la mail dei turni). Come l'import
+// manuale dall'editor, si accetta sia il .doc Word sia il PDF.
 export function allegatiSabato(nomiAllegati) {
-  return (nomiAllegati || []).filter(n => /SABATO/i.test(n || '') && /\.docx?$/i.test(n));
+  return (nomiAllegati || []).filter(n => /SABATO/i.test(n || '') && /\.(docx?|pdf)$/i.test(n));
 }
 
 // Un .docx è un archivio zip (firma PK\x03\x04): la lettura windows-1252 usata
@@ -28,4 +29,11 @@ export function allegatiSabato(nomiAllegati) {
 export function sembraDocx(buf) {
   return !!buf && buf.length >= 4 &&
     buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04;
+}
+
+// Un PDF inizia con "%PDF": si guarda il contenuto, non l'estensione, così il
+// routing doc/PDF in apply-sabato funziona anche con allegati rinominati.
+export function sembraPdf(buf) {
+  return !!buf && buf.length >= 4 &&
+    buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46; // %PDF
 }

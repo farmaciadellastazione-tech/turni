@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 // serve al workflow di automazione per distinguere la mail dei turni
 // dalle circolari quotidiane (ritiri lotti, DPC, avvisi ASL…), che sono
 // anch'esse piene di PDF e .docx e arrivano quasi ogni giorno.
-import { allegatiBollettino, allegatiSabato, sembraDocx } from '../tools/selezione-mail.mjs';
+import { allegatiBollettino, allegatiSabato, sembraDocx, sembraPdf } from '../tools/selezione-mail.mjs';
 
 // Allegati reali della mail "TURNI COMUNE DELLA SPEZIA DAL 10 LUGLIO 2026 AL 24 LUGLIO 2026"
 const MAIL_TURNI = {
@@ -64,6 +64,25 @@ describe('allegatiSabato — solo i .doc "SABATO POMERIGGIO"', () => {
 
   it('ignora i .docx delle circolari', () => {
     expect(allegatiSabato(MAIL_CIRCOLARE.allegati)).toEqual([]);
+  });
+
+  it("accetta l'elenco sabato anche in PDF (formato supportato dall'import manuale)", () => {
+    expect(allegatiSabato([
+      'image001.png',
+      '10 LUGLIO 2026 - 17 LUGLIO 2026.pdf',
+      'SABATO POMERIGGIO 11 LUGLIO 2026.pdf',
+    ])).toEqual(['SABATO POMERIGGIO 11 LUGLIO 2026.pdf']);
+  });
+});
+
+describe('sembraPdf — riconosce i PDF dal magic number', () => {
+  it('un PDF inizia con %PDF', () => {
+    expect(sembraPdf(Buffer.from('%PDF-1.7\n...'))).toBe(true);
+  });
+
+  it('doc Word o buffer corto non sono PDF', () => {
+    expect(sembraPdf(Buffer.from([0xd0, 0xcf, 0x11, 0xe0]))).toBe(false);
+    expect(sembraPdf(Buffer.alloc(0))).toBe(false);
   });
 });
 

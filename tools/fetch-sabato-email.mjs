@@ -6,10 +6,11 @@
 //   GMAIL_USER / GMAIL_APP_PASSWORD
 //
 // Cerca nelle mail di Federfarma degli ultimi 60 giorni gli allegati
-// "SABATO POMERIGGIO <data>.doc" (riconosciuti dal nome file: le circolari
-// quotidiane portano altri .docx che non vanno confusi con l'elenco sabato).
-// La mail dei turni può portare più doc (uno per sabato): li salva tutti
-// come <prefisso>1.doc, <prefisso>2.doc, …
+// "SABATO POMERIGGIO <data>" in .doc o PDF (riconosciuti dal nome file: le
+// circolari quotidiane portano altri .docx/.pdf che non vanno confusi con
+// l'elenco sabato). La mail dei turni può portare più elenchi (uno per sabato):
+// li salva tutti come <prefisso>1.doc, <prefisso>2.doc, … (estensione sempre
+// .doc: apply-sabato riconosce il formato vero dal contenuto, non dal nome).
 //
 // Exit: 0 = doc scaricati · 2 = credenziali mancanti · 3 = nessuno trovato
 
