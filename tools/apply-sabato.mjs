@@ -16,7 +16,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { sembraDocx } from './selezione-mail.mjs';
+import { sembraDocx, sembraPdf } from './selezione-mail.mjs';
 
 const require = createRequire(import.meta.url);
 const { parseSabatoPomeriggio } = require(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'turni-parser.js'));
@@ -62,7 +62,22 @@ for (const docPath of docPaths) {
     continue;
   }
 
-  const testo = estraiTestoDoc(buf);
+  // L'elenco può arrivare anche in PDF (come nell'import manuale dall'editor):
+  // si riconosce dal contenuto e si estrae il testo con pdf-parse.
+  let testo;
+  if (sembraPdf(buf)) {
+    try {
+      const { PDFParse } = require('pdf-parse');
+      const parser = new PDFParse({ data: buf });
+      ({ text: testo } = await parser.getText());
+    } catch (e) {
+      console.error(`${docPath}: PDF non leggibile (${e.message}) — saltato.`);
+      errori++;
+      continue;
+    }
+  } else {
+    testo = estraiTestoDoc(buf);
+  }
 
   const { data, orario, farmacie, problemi } = parseSabatoPomeriggio(testo);
 
