@@ -44,11 +44,19 @@ try { ({ PDFParse } = require('pdf-parse')); }
 catch { console.error('Manca pdf-parse: esegui npm install nella cartella tools/.'); process.exit(1); }
 
 const turni = {};
+let errori = 0;   // un PDF illeggibile non deve bloccare le altre settimane
 for (const pdfPath of pdfPaths) {
-  const parser = new PDFParse({ data: readFileSync(pdfPath) });
-  const { text } = await parser.getText();
+  let parziali, problemi;
+  try {
+    const parser = new PDFParse({ data: readFileSync(pdfPath) });
+    const { text } = await parser.getText();
+    ({ turni: parziali, problemi } = parseBulletin(text));
+  } catch (e) {
+    console.error(`${pdfPath}: PDF non leggibile (${e.message}) — saltato.`);
+    errori++;
+    continue;
+  }
 
-  const { turni: parziali, problemi } = parseBulletin(text);
   if (problemi.length) {
     console.warn(`Problemi di parsing in ${pdfPath}:`);
     problemi.forEach(p => console.warn('  ' + p));
@@ -59,8 +67,11 @@ for (const pdfPath of pdfPaths) {
 }
 
 if (!Object.keys(turni).length) {
-  console.log('Nessun turno estratto dai bollettini — niente da fare.');
-  process.exit(0);
+  // Il fetch garantisce che questi PDF vengono dalla mail dei turni: zero giorni
+  // estratti non è un "niente da fare" ma un probabile cambio di layout del PDF
+  // (o PDF tutti illeggibili) — meglio un run rosso che una bacheca stantia.
+  console.error('Nessun turno estratto da bollettini autentici: possibile regressione del parser o PDF illeggibili.');
+  process.exit(1);
 }
 
 // 3. Leggi overrides attuali dal Gist (cache-busting con timestamp)
@@ -101,7 +112,7 @@ for (const [data, rec] of Object.entries(turni)) {
 
 if (!changed) {
   console.log('Nessuna modifica rispetto agli override esistenti — Gist invariato.');
-  process.exit(0);
+  process.exit(errori ? 1 : 0);
 }
 
 // 5. Aggiorna il Gist
@@ -122,3 +133,5 @@ if (!resp.ok) {
 }
 
 console.log(`✓ Gist aggiornato: ${changed} giorn${changed === 1 ? 'o modificato' : 'i modificati'}.`);
+if (errori) console.error(`ATTENZIONE: aggiornamento riuscito ma ${errori} PDF non applicat${errori === 1 ? 'o' : 'i'} (vedi sopra) — run segnato in errore per farlo notare.`);
+process.exit(errori ? 1 : 0);

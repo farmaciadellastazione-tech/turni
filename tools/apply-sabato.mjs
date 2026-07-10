@@ -16,6 +16,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { sembraDocx } from './selezione-mail.mjs';
 
 const require = createRequire(import.meta.url);
 const { parseSabatoPomeriggio } = require(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'turni-parser.js'));
@@ -54,6 +55,13 @@ let errori = 0;
 
 for (const docPath of docPaths) {
   const buf = readFileSync(docPath);
+
+  if (sembraDocx(buf)) {
+    console.error(`${docPath}: è un .docx (Word moderno), non leggibile come windows-1252 — convertirlo in .doc o importarlo dall'editor. Saltato.`);
+    errori++;
+    continue;
+  }
+
   const testo = estraiTestoDoc(buf);
 
   const { data, orario, farmacie, problemi } = parseSabatoPomeriggio(testo);
@@ -128,4 +136,5 @@ if (!resp.ok) {
 }
 
 console.log(`✓ sabato.json aggiornato per: ${Object.keys(nuovi).join(', ')}.`);
+if (errori) console.error(`ATTENZIONE: aggiornamento riuscito ma ${errori} doc non applicat${errori === 1 ? 'o' : 'i'} (vedi sopra) — run segnato in errore per farlo notare.`);
 process.exit(errori ? 1 : 0);

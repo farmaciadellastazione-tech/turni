@@ -22,3 +22,10 @@ export function allegatiBollettino(oggetto, nomiAllegati) {
 export function allegatiSabato(nomiAllegati) {
   return (nomiAllegati || []).filter(n => /SABATO/i.test(n || '') && /\.docx?$/i.test(n));
 }
+
+// Un .docx è un archivio zip (firma PK\x03\x04): la lettura windows-1252 usata
+// per i .doc binari produrrebbe spazzatura, meglio riconoscerlo e dirlo chiaro.
+export function sembraDocx(buf) {
+  return !!buf && buf.length >= 4 &&
+    buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04;
+}
