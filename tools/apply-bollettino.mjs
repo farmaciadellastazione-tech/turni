@@ -1,11 +1,13 @@
-// apply-bollettino.mjs — Applica un bollettino PDF agli override del Gist.
+// apply-bollettino.mjs — Applica uno o più bollettini PDF agli override del Gist.
 //
-// Uso: node tools/apply-bollettino.mjs <bollettino.pdf>
+// Uso: node tools/apply-bollettino.mjs <bollettino.pdf> [altro.pdf …]
+//      (la mail dei turni porta un PDF per settimana: si passano tutti insieme,
+//       così il Gist viene aggiornato con un solo PATCH)
 //
 // Env:
 //   GIST_PAT — token GitHub con scope "gist" (obbligatorio)
 //
-// Legge il PDF, chiama parseBulletin(), merge con gli override esistenti sul Gist
+// Legge i PDF, chiama parseBulletin(), merge con gli override esistenti sul Gist
 // (preserva fineOra/straord/nota manuali), aggiorna il Gist solo se qualcosa cambia.
 //
 // Exit: 0 = ok · 1 = errore
@@ -24,9 +26,9 @@ const GIST_OWNER = 'farmaciadellastazione-tech';
 const GIST_RAW = `https://gist.githubusercontent.com/${GIST_OWNER}/${GIST_ID}/raw/${GIST_FILE}`;
 const GIST_API = `https://api.github.com/gists/${GIST_ID}`;
 
-const pdfPath = process.argv[2];
-if (!pdfPath) {
-  console.error('Uso: node tools/apply-bollettino.mjs <bollettino.pdf>');
+const pdfPaths = process.argv.slice(2);
+if (!pdfPaths.length) {
+  console.error('Uso: node tools/apply-bollettino.mjs <bollettino.pdf> [altro.pdf …]');
   process.exit(1);
 }
 
@@ -36,26 +38,41 @@ if (!pat) {
   process.exit(1);
 }
 
-// 1. Estrai testo dal PDF (stesso metodo di genera-turni.mjs)
+// 1. Estrai testo dai PDF (stesso metodo di genera-turni.mjs) e parsali tutti
 let PDFParse;
 try { ({ PDFParse } = require('pdf-parse')); }
 catch { console.error('Manca pdf-parse: esegui npm install nella cartella tools/.'); process.exit(1); }
 
-const parser = new PDFParse({ data: readFileSync(pdfPath) });
-const { text } = await parser.getText();
+const turni = {};
+let errori = 0;   // un PDF illeggibile non deve bloccare le altre settimane
+for (const pdfPath of pdfPaths) {
+  let parziali, problemi;
+  try {
+    const parser = new PDFParse({ data: readFileSync(pdfPath) });
+    const { text } = await parser.getText();
+    ({ turni: parziali, problemi } = parseBulletin(text));
+  } catch (e) {
+    console.error(`${pdfPath}: PDF non leggibile (${e.message}) — saltato.`);
+    errori++;
+    continue;
+  }
 
-// 2. Parsa il bollettino
-const { turni, problemi } = parseBulletin(text);
-if (problemi.length) {
-  console.warn('Problemi di parsing:');
-  problemi.forEach(p => console.warn('  ' + p));
+  if (problemi.length) {
+    console.warn(`Problemi di parsing in ${pdfPath}:`);
+    problemi.forEach(p => console.warn('  ' + p));
+  }
+  const giorni = Object.keys(parziali);
+  console.log(`${pdfPath}: estratti ${giorni.length} giorni${giorni.length ? ` (${giorni[0]} → ${giorni[giorni.length - 1]})` : ''}`);
+  Object.assign(turni, parziali);
 }
-const giorni = Object.keys(turni);
-if (!giorni.length) {
-  console.log('Nessun turno estratto dal bollettino — niente da fare.');
-  process.exit(0);
+
+if (!Object.keys(turni).length) {
+  // Il fetch garantisce che questi PDF vengono dalla mail dei turni: zero giorni
+  // estratti non è un "niente da fare" ma un probabile cambio di layout del PDF
+  // (o PDF tutti illeggibili) — meglio un run rosso che una bacheca stantia.
+  console.error('Nessun turno estratto da bollettini autentici: possibile regressione del parser o PDF illeggibili.');
+  process.exit(1);
 }
-console.log(`Estratti ${giorni.length} giorni dal bollettino: ${giorni.join(', ')}`);
 
 // 3. Leggi overrides attuali dal Gist (cache-busting con timestamp)
 let current = { overrides: {} };
@@ -95,7 +112,7 @@ for (const [data, rec] of Object.entries(turni)) {
 
 if (!changed) {
   console.log('Nessuna modifica rispetto agli override esistenti — Gist invariato.');
-  process.exit(0);
+  process.exit(errori ? 1 : 0);
 }
 
 // 5. Aggiorna il Gist
@@ -116,3 +133,5 @@ if (!resp.ok) {
 }
 
 console.log(`✓ Gist aggiornato: ${changed} giorn${changed === 1 ? 'o modificato' : 'i modificati'}.`);
+if (errori) console.error(`ATTENZIONE: aggiornamento riuscito ma ${errori} PDF non applicat${errori === 1 ? 'o' : 'i'} (vedi sopra) — run segnato in errore per farlo notare.`);
+process.exit(errori ? 1 : 0);

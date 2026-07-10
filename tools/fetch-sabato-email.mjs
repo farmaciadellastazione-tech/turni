@@ -1,24 +1,28 @@
-// fetch-sabato-email.mjs — scarica il .doc "SABATO POMERIGGIO" via IMAP.
+// fetch-sabato-email.mjs — scarica i .doc "SABATO POMERIGGIO" via IMAP.
 //
-// Uso: node tools/fetch-sabato-email.mjs [output.doc]
+// Uso: node tools/fetch-sabato-email.mjs [prefisso-output]
 //
 // Autenticazione via App Password Gmail:
 //   GMAIL_USER / GMAIL_APP_PASSWORD
 //
-// Cerca email con allegato .doc da federfarmalaspezia.it negli ultimi 60 giorni.
-// Salva il .doc più recente nel file di output.
+// Cerca nelle mail di Federfarma degli ultimi 60 giorni gli allegati
+// "SABATO POMERIGGIO <data>.doc" (riconosciuti dal nome file: le circolari
+// quotidiane portano altri .docx che non vanno confusi con l'elenco sabato).
+// La mail dei turni può portare più doc (uno per sabato): li salva tutti
+// come <prefisso>1.doc, <prefisso>2.doc, …
 //
-// Exit: 0 = doc scaricato · 2 = credenziali mancanti · 3 = nessuno trovato
+// Exit: 0 = doc scaricati · 2 = credenziali mancanti · 3 = nessuno trovato
 
 import { writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { allegatiSabato } from './selezione-mail.mjs';
 
 const require = createRequire(import.meta.url);
 const { ImapFlow } = require('imapflow');
 const { simpleParser } = require('mailparser');
 
 async function main() {
-  const OUT = process.argv[2] || '.sabato.doc';
+  const PREFIX = process.argv[2] || '.sabato-';
 
   const user = process.env.GMAIL_USER;
   const pass = process.env.GMAIL_APP_PASSWORD;
@@ -62,16 +66,23 @@ async function main() {
         for await (const chunk of content) chunks.push(chunk);
         const parsed = await simpleParser(Buffer.concat(chunks));
 
-        const att = parsed.attachments?.find(a => /\.(doc|docx)$/i.test(a.filename || ''));
-        if (!att) continue;
+        const nomi = (parsed.attachments || []).map(a => a.filename || '');
+        const scelti = allegatiSabato(nomi);
+        if (!scelti.length) continue;
 
-        writeFileSync(OUT, att.content);
         const rawDate = parsed.date?.toUTCString() || '';
-        console.log(`Scaricato "${att.filename}" (${att.content.length} byte) — mail del ${rawDate} -> ${OUT}`);
+        console.log(`Mail con doc sabato del ${rawDate}: "${parsed.subject}"`);
+        let n = 0;
+        for (const att of parsed.attachments) {
+          if (!scelti.includes(att.filename || '')) continue;
+          const out = `${PREFIX}${++n}.doc`;
+          writeFileSync(out, att.content);
+          console.log(`  Scaricato "${att.filename}" (${att.content.length} byte) -> ${out}`);
+        }
         return 0;
       }
 
-      console.log('Nessun .doc nelle mail candidate di Federfarma.');
+      console.log('Nessun doc "SABATO POMERIGGIO" nelle mail di Federfarma.');
       return 3;
     } finally {
       lock.release();
