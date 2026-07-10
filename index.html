@@ -64,8 +64,15 @@
   .farm-card { flex: 1; display: flex; flex-direction: column; justify-content: center; }
   /* Forte risalto rispetto ai "prossimi turni": testo e spaziature ampie. */
   .farm-card + .farm-card { margin-top: 26px; padding-top: 26px; border-top: 1px solid #e0e8e2; }
-  .farm-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .farm-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .farm-dist { font-size: 21px; font-weight: 800; color: #2e7d4f; white-space: nowrap; }
+  /* QR/link "naviga verso la farmacia": affiancato alla distanza, spazio già libero a destra
+     del nome. QR sul kiosk (chi guarda il totem scansiona col proprio telefono); link diretto
+     su mobile (chi guarda già dal telefono non ha bisogno di scansionare). */
+  .farm-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .farm-nav-qr { width: 48px; height: 48px; flex-shrink: 0; }
+  .farm-nav-qr svg { width: 100%; height: 100%; display: block; }
+  .farm-nav-link { font-size: 26px; text-decoration: none; line-height: 1; }
   .farm-hours { margin-top: 10px; font-size: 18px; font-weight: 700; color: #555; }
   .turno-name { font-size: 40px; font-weight: 800; color: #1a1a1a; line-height: 1.1; }
   .turno-name.is-us { color: #2e7d4f; }
@@ -892,6 +899,47 @@ function fmtDist(nome, dist) {
   return dist.toLocaleString(LOCALE[LANG] || 'it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' km';
 }
 
+// Coordinate della farmacia più vicina tra i nomi di un turno composto (stessa scelta di
+// distanzaKm, ma ritorna il punto anziché la distanza): serve per il link di navigazione.
+function coordFarmacia(nome) {
+  const ref = POSIZIONI['Della Stazione'];
+  let best = null, bestD = null;
+  for (const n of nome.split('/').map(s => s.trim())) {
+    const p = POSIZIONI[n];
+    if (!Array.isArray(p) || p.length !== 2) continue;
+    if (!Array.isArray(ref)) { best = p; break; } // niente riferimento: prendi la prima disponibile
+    const d = haversineKm(ref, p);
+    if (bestD == null || d < bestD) { bestD = d; best = p; }
+  }
+  return best;
+}
+
+// Elemento "naviga verso la farmacia": QR (kiosk) o link diretto (mobile). Null se siamo
+// già noi o se non abbiamo coordinate per quella farmacia.
+function buildNavEl(nome) {
+  if (nome === 'Della Stazione') return null;
+  const p = coordFarmacia(nome);
+  if (!p) return null;
+  const url = 'https://www.google.com/maps/search/?api=1&query=' + p[0] + ',' + p[1];
+  if (isMobile()) {
+    const a = document.createElement('a');
+    a.className = 'farm-nav-link';
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = '🧭';
+    return a;
+  }
+  if (typeof qrcode === 'undefined') return null;
+  const box = document.createElement('div');
+  box.className = 'farm-nav-qr';
+  const q = qrcode(0, 'M');
+  q.addData(url);
+  q.make();
+  box.innerHTML = q.createSvgTag({ cellSize: 3, margin: 1, scalable: true });
+  return box;
+}
+
 // Crea una scheda farmacia (stessa grafica per tutte): nome · distanza, contatti, orario.
 function buildFarmCard(e) {
   const card = document.createElement('div');
@@ -901,10 +949,15 @@ function buildFarmCard(e) {
   const name = document.createElement('div');
   name.className = 'turno-name' + (e.nome === 'Della Stazione' ? ' is-us' : '');
   name.textContent = 'Farm. ' + e.nome;
+  const right = document.createElement('div');
+  right.className = 'farm-right';
   const dist = document.createElement('div');
   dist.className = 'farm-dist';
   dist.textContent = fmtDist(e.nome, e.dist);
-  head.appendChild(name); head.appendChild(dist);
+  right.appendChild(dist);
+  const nav = buildNavEl(e.nome);
+  if (nav) right.appendChild(nav);
+  head.appendChild(name); head.appendChild(right);
   card.appendChild(head);
   const contact = document.createElement('div');
   contact.className = 'turno-contact';
