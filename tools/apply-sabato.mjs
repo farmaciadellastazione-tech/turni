@@ -1,14 +1,16 @@
-// apply-sabato.mjs — Applica un .doc "SABATO POMERIGGIO" al file sabato.json del Gist.
+// apply-sabato.mjs — Applica uno o più .doc "SABATO POMERIGGIO" a sabato.json del Gist.
 //
-// Uso: node tools/apply-sabato.mjs <sabato.doc>
+// Uso: node tools/apply-sabato.mjs <sabato.doc> [altro.doc …]
+//      (la mail dei turni porta un doc per sabato: si passano tutti insieme,
+//       così il Gist viene aggiornato con un solo PATCH)
 //
 // Env:
 //   GIST_PAT — token GitHub con scope "gist" (obbligatorio)
 //
-// Legge il .doc come windows-1252 (stesso metodo dell'editor: estraiTestoSabato),
+// Legge i .doc come windows-1252 (stesso metodo dell'editor: estraiTestoSabato),
 // chiama parseSabatoPomeriggio(), scarta i sabati passati, merge con sabato.json.
 //
-// Exit: 0 = ok · 1 = errore
+// Exit: 0 = ok · 1 = errore (anche se solo uno dei doc non è leggibile)
 
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -24,9 +26,9 @@ const GIST_OWNER = 'farmaciadellastazione-tech';
 const GIST_RAW = `https://gist.githubusercontent.com/${GIST_OWNER}/${GIST_ID}/raw/${GIST_FILE}`;
 const GIST_API = `https://api.github.com/gists/${GIST_ID}`;
 
-const docPath = process.argv[2];
-if (!docPath) {
-  console.error('Uso: node tools/apply-sabato.mjs <sabato.doc>');
+const docPaths = process.argv.slice(2);
+if (!docPaths.length) {
+  console.error('Uso: node tools/apply-sabato.mjs <sabato.doc> [altro.doc …]');
   process.exit(1);
 }
 
@@ -45,34 +47,48 @@ function estraiTestoDoc(buf) {
   return righe.join('\n');
 }
 
-const buf = readFileSync(docPath);
-const testo = estraiTestoDoc(buf);
-
-const { data, orario, farmacie, problemi } = parseSabatoPomeriggio(testo);
-
-if (problemi.length) {
-  console.warn('Problemi di parsing:');
-  problemi.forEach(p => console.warn('  ' + p));
-}
-
-if (!data) {
-  console.error('Data non riconosciuta nel documento — uscita.');
-  process.exit(1);
-}
-
-if (!farmacie.length) {
-  console.error('Nessuna farmacia riconosciuta nel documento — uscita.');
-  process.exit(1);
-}
-
-// Scarta sabati passati
+// Parsa tutti i doc; un doc illeggibile non blocca gli altri ma segna l'errore.
 const oggi = new Date().toISOString().slice(0, 10);
-if (data < oggi) {
-  console.log(`Sabato ${data} è già passato — niente da fare.`);
-  process.exit(0);
+const nuovi = {};   // data → { orario, farmacie }
+let errori = 0;
+
+for (const docPath of docPaths) {
+  const buf = readFileSync(docPath);
+  const testo = estraiTestoDoc(buf);
+
+  const { data, orario, farmacie, problemi } = parseSabatoPomeriggio(testo);
+
+  if (problemi.length) {
+    console.warn(`Problemi di parsing in ${docPath}:`);
+    problemi.forEach(p => console.warn('  ' + p));
+  }
+
+  if (!data) {
+    console.error(`${docPath}: data non riconosciuta — saltato.`);
+    errori++;
+    continue;
+  }
+
+  if (!farmacie.length) {
+    console.error(`${docPath}: nessuna farmacia riconosciuta — saltato.`);
+    errori++;
+    continue;
+  }
+
+  // Scarta sabati passati
+  if (data < oggi) {
+    console.log(`${docPath}: sabato ${data} è già passato — saltato.`);
+    continue;
+  }
+
+  console.log(`${docPath}: sabato ${data} — orario ${orario} — ${farmacie.length} farmacie: ${farmacie.join(', ')}`);
+  nuovi[data] = { orario, farmacie };
 }
 
-console.log(`Sabato ${data} — orario ${orario} — ${farmacie.length} farmacie: ${farmacie.join(', ')}`);
+if (!Object.keys(nuovi).length) {
+  console.log('Nessun sabato futuro da applicare.');
+  process.exit(errori ? 1 : 0);
+}
 
 // Leggi sabato.json attuale dal Gist
 let current = {};
@@ -83,20 +99,17 @@ try {
   console.warn('sabato.json non leggibile:', e.message);
 }
 
-// Controlla se è già aggiornato
-const ex = current[data];
-const neo = { orario, farmacie };
-if (ex && JSON.stringify(ex) === JSON.stringify(neo)) {
-  console.log('Nessuna modifica — Gist invariato.');
-  process.exit(0);
-}
-
-// Rimuovi sabati passati e aggiorna il sabato corrente
+// Rimuovi sabati passati e applica i nuovi
 const merged = {};
 for (const [k, v] of Object.entries(current)) {
   if (k >= oggi) merged[k] = v;
 }
-merged[data] = neo;
+Object.assign(merged, nuovi);
+
+if (JSON.stringify(merged) === JSON.stringify(current)) {
+  console.log('Nessuna modifica — Gist invariato.');
+  process.exit(errori ? 1 : 0);
+}
 
 const nuovoContenuto = JSON.stringify(merged, null, 2);
 const resp = await fetch(GIST_API, {
@@ -114,4 +127,5 @@ if (!resp.ok) {
   process.exit(1);
 }
 
-console.log(`✓ sabato.json aggiornato per il ${data}.`);
+console.log(`✓ sabato.json aggiornato per: ${Object.keys(nuovi).join(', ')}.`);
+process.exit(errori ? 1 : 0);

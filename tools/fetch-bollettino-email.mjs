@@ -1,28 +1,30 @@
-// fetch-bollettino-email.mjs — scarica il PDF del bollettino settimanale via IMAP.
+// fetch-bollettino-email.mjs — scarica i PDF del bollettino turni via IMAP.
 //
-// Uso: node tools/fetch-bollettino-email.mjs [output.pdf]
+// Uso: node tools/fetch-bollettino-email.mjs [prefisso-output]
 //
 // Autenticazione via App Password Gmail (nessun OAuth, nessuna scadenza):
 //   GMAIL_USER         — indirizzo Gmail (es. farmaciadellastazione@gmail.com)
 //   GMAIL_APP_PASSWORD — App Password Google a 16 caratteri (senza spazi)
 //
-// Cerca email di Federfarma La Spezia (info@federfarmalaspezia.it) con allegati PDF
-// negli ultimi 60 giorni; salva il PDF più recente nel file di output.
+// Cerca la mail dei turni di Federfarma La Spezia negli ultimi 60 giorni:
+// la riconosce dall'oggetto ("TURNI COMUNE DELLA SPEZIA …"), non dal semplice
+// allegato PDF — le circolari quotidiane sono anch'esse piene di PDF.
+// La mail può portare più bollettini (uno per settimana): li salva tutti
+// come <prefisso>1.pdf, <prefisso>2.pdf, …
 //
-// Exit code: 0 = pdf scaricato · 2 = credenziali mancanti ·
+// Exit code: 0 = pdf scaricati · 2 = credenziali mancanti ·
 //            3 = nessuna mail/pdf trovata · altro = errore.
 
 import { writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
 import { createRequire } from 'node:module';
+import { allegatiBollettino } from './selezione-mail.mjs';
 
 const require = createRequire(import.meta.url);
 const { ImapFlow } = require('imapflow');
 const { simpleParser } = require('mailparser');
 
 async function main() {
-  const OUT = process.argv[2] || '.bollettino.pdf';
+  const PREFIX = process.argv[2] || '.bollettino-';
 
   const user = process.env.GMAIL_USER;
   const pass = process.env.GMAIL_APP_PASSWORD;
@@ -67,16 +69,23 @@ async function main() {
         for await (const chunk of content) chunks.push(chunk);
         const parsed = await simpleParser(Buffer.concat(chunks));
 
-        const att = parsed.attachments?.find(a => /\.pdf$/i.test(a.filename || ''));
-        if (!att) continue;
+        const nomi = (parsed.attachments || []).map(a => a.filename || '');
+        const scelti = allegatiBollettino(parsed.subject || '', nomi);
+        if (!scelti.length) continue;
 
-        writeFileSync(OUT, att.content);
         const rawDate = parsed.date?.toUTCString() || '';
-        console.log(`Scaricato "${att.filename}" (${att.content.length} byte) — mail del ${rawDate} -> ${OUT}`);
+        console.log(`Mail turni del ${rawDate}: "${parsed.subject}"`);
+        let n = 0;
+        for (const att of parsed.attachments) {
+          if (!scelti.includes(att.filename || '')) continue;
+          const out = `${PREFIX}${++n}.pdf`;
+          writeFileSync(out, att.content);
+          console.log(`  Scaricato "${att.filename}" (${att.content.length} byte) -> ${out}`);
+        }
         return 0;
       }
 
-      console.log('Nessun PDF nelle mail candidate di Federfarma.');
+      console.log('Nessuna mail turni con PDF tra le mail di Federfarma.');
       return 3;
     } finally {
       lock.release();

@@ -31,46 +31,46 @@ jobs:
         run: npm ci
         working-directory: tools
 
-      # ── Bollettino settimanale (PDF) ─────────────────────────────────────────
+      # ── Bollettino turni (PDF, uno per settimana nella stessa mail) ──────────
 
-      - name: Cerca l'ultimo bollettino PDF
+      - name: Cerca i PDF dell'ultima mail turni
         id: fetch_bollettino
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: |
           set +e
-          node tools/fetch-bollettino-email.mjs .bollettino.pdf
+          node tools/fetch-bollettino-email.mjs .bollettino-
           code=$?
           set -e
           if [ "$code" -eq 3 ]; then echo "found=false" >> "$GITHUB_OUTPUT"; exit 0; fi
           if [ "$code" -ne 0 ]; then echo "::error::Fetch bollettino fallito (exit $code)"; exit "$code"; fi
           echo "found=true" >> "$GITHUB_OUTPUT"
 
-      - name: Applica bollettino agli override del Gist
+      - name: Applica i bollettini agli override del Gist
         if: steps.fetch_bollettino.outputs.found == 'true'
         env:
           GIST_PAT: ${{ secrets.GIST_PAT }}
-        run: node tools/apply-bollettino.mjs .bollettino.pdf
+        run: node tools/apply-bollettino.mjs .bollettino-*.pdf
 
-      # ── Sabato pomeriggio (.doc) ──────────────────────────────────────────────
+      # ── Sabato pomeriggio (.doc, uno per sabato nella stessa mail) ───────────
 
-      - name: Cerca l'ultimo .doc sabato pomeriggio
+      - name: Cerca i .doc sabato pomeriggio
         id: fetch_sabato
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: |
           set +e
-          node tools/fetch-sabato-email.mjs .sabato.doc
+          node tools/fetch-sabato-email.mjs .sabato-
           code=$?
           set -e
           if [ "$code" -eq 3 ]; then echo "found=false" >> "$GITHUB_OUTPUT"; exit 0; fi
           if [ "$code" -ne 0 ]; then echo "::error::Fetch sabato fallito (exit $code)"; exit "$code"; fi
           echo "found=true" >> "$GITHUB_OUTPUT"
 
-      - name: Applica .doc sabato a sabato.json del Gist
+      - name: Applica i .doc sabato a sabato.json del Gist
         if: steps.fetch_sabato.outputs.found == 'true'
         env:
           GIST_PAT: ${{ secrets.GIST_PAT }}
-        run: node tools/apply-sabato.mjs .sabato.doc
+        run: node tools/apply-sabato.mjs .sabato-*.doc

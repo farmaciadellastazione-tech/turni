@@ -1,11 +1,13 @@
-// apply-bollettino.mjs — Applica un bollettino PDF agli override del Gist.
+// apply-bollettino.mjs — Applica uno o più bollettini PDF agli override del Gist.
 //
-// Uso: node tools/apply-bollettino.mjs <bollettino.pdf>
+// Uso: node tools/apply-bollettino.mjs <bollettino.pdf> [altro.pdf …]
+//      (la mail dei turni porta un PDF per settimana: si passano tutti insieme,
+//       così il Gist viene aggiornato con un solo PATCH)
 //
 // Env:
 //   GIST_PAT — token GitHub con scope "gist" (obbligatorio)
 //
-// Legge il PDF, chiama parseBulletin(), merge con gli override esistenti sul Gist
+// Legge i PDF, chiama parseBulletin(), merge con gli override esistenti sul Gist
 // (preserva fineOra/straord/nota manuali), aggiorna il Gist solo se qualcosa cambia.
 //
 // Exit: 0 = ok · 1 = errore
@@ -24,9 +26,9 @@ const GIST_OWNER = 'farmaciadellastazione-tech';
 const GIST_RAW = `https://gist.githubusercontent.com/${GIST_OWNER}/${GIST_ID}/raw/${GIST_FILE}`;
 const GIST_API = `https://api.github.com/gists/${GIST_ID}`;
 
-const pdfPath = process.argv[2];
-if (!pdfPath) {
-  console.error('Uso: node tools/apply-bollettino.mjs <bollettino.pdf>');
+const pdfPaths = process.argv.slice(2);
+if (!pdfPaths.length) {
+  console.error('Uso: node tools/apply-bollettino.mjs <bollettino.pdf> [altro.pdf …]');
   process.exit(1);
 }
 
@@ -36,26 +38,30 @@ if (!pat) {
   process.exit(1);
 }
 
-// 1. Estrai testo dal PDF (stesso metodo di genera-turni.mjs)
+// 1. Estrai testo dai PDF (stesso metodo di genera-turni.mjs) e parsali tutti
 let PDFParse;
 try { ({ PDFParse } = require('pdf-parse')); }
 catch { console.error('Manca pdf-parse: esegui npm install nella cartella tools/.'); process.exit(1); }
 
-const parser = new PDFParse({ data: readFileSync(pdfPath) });
-const { text } = await parser.getText();
+const turni = {};
+for (const pdfPath of pdfPaths) {
+  const parser = new PDFParse({ data: readFileSync(pdfPath) });
+  const { text } = await parser.getText();
 
-// 2. Parsa il bollettino
-const { turni, problemi } = parseBulletin(text);
-if (problemi.length) {
-  console.warn('Problemi di parsing:');
-  problemi.forEach(p => console.warn('  ' + p));
+  const { turni: parziali, problemi } = parseBulletin(text);
+  if (problemi.length) {
+    console.warn(`Problemi di parsing in ${pdfPath}:`);
+    problemi.forEach(p => console.warn('  ' + p));
+  }
+  const giorni = Object.keys(parziali);
+  console.log(`${pdfPath}: estratti ${giorni.length} giorni${giorni.length ? ` (${giorni[0]} → ${giorni[giorni.length - 1]})` : ''}`);
+  Object.assign(turni, parziali);
 }
-const giorni = Object.keys(turni);
-if (!giorni.length) {
-  console.log('Nessun turno estratto dal bollettino — niente da fare.');
+
+if (!Object.keys(turni).length) {
+  console.log('Nessun turno estratto dai bollettini — niente da fare.');
   process.exit(0);
 }
-console.log(`Estratti ${giorni.length} giorni dal bollettino: ${giorni.join(', ')}`);
 
 // 3. Leggi overrides attuali dal Gist (cache-busting con timestamp)
 let current = { overrides: {} };
