@@ -74,3 +74,12 @@ jobs:
         env:
           GIST_PAT: ${{ secrets.GIST_PAT }}
         run: node tools/apply-sabato.mjs .sabato-*.doc
+
+      # ── Rete di sicurezza ─────────────────────────────────────────────────────
+      # Anche se i passi sopra sono verdi ("nessuna mail trovata" è un esito
+      # legittimo), i dati sul Gist devono coprire il periodo corrente: se una
+      # mail Federfarma non viene riconosciuta dai filtri, questo step fa
+      # diventare rosso il run invece di lasciare la bacheca stantia in silenzio.
+
+      - name: Verifica che il Gist copra il periodo corrente
+        run: node tools/verifica-copertura.mjs
