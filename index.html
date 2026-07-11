@@ -15,9 +15,9 @@
      overflow:hidden). Evita che pulendo lo schermo parta il pinch-zoom. */
   html, body { width: 100%; height: 100%; overflow: hidden; background: #f5f7f5; font-family: 'Segoe UI', Arial, 'Noto Sans Bengali', 'Noto Sans Devanagari', sans-serif; touch-action: none; }
   .page { display: flex; flex-direction: column; height: 100vh; }
-  .header { background: #fff; border-bottom: 3px solid #2e7d4f; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .header { background: #fff; border-bottom: 3px solid #117e09; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .header-left { display: flex; align-items: center; gap: 12px; }
-  .cross { width: 38px; height: 38px; flex-shrink: 0; }
+  .cross { width: 46px; height: 46px; flex-shrink: 0; }
   .farm-name { font-size: 22px; font-weight: 700; color: #1a1a1a; line-height: 1; }
   .farm-info { font-size: 12px; color: #555; margin-top: 3px; display: flex; gap: 14px; }
   /* Logo WhatsApp accanto al numero: solo visivo (niente link, kiosk-safe come il 📞). */
@@ -28,7 +28,7 @@
   .clock-date { font-size: 11px; color: #666; margin-top: 2px; text-transform: capitalize; }
   /* Badge "Aperta ora / Chiusa" della nostra farmacia (orari editabili dal Gist). */
   .orari-tag { display: inline-block; font-size: 11px; font-weight: 700; margin-top: 4px; padding: 2px 9px; border-radius: 10px; }
-  .orari-tag.aperta { color: #1b5e34; background: #e3f3ea; }
+  .orari-tag.aperta { color: #0d5f07; background: #e7f2e6; }
   .orari-tag.chiusa { color: #a32020; background: #fbe6e6; }
   /* Avviso diritto di chiamata notturno (banner rosso sotto la farmacia di turno, di notte). */
   .notte-banner { background: #c0392b; color: #fff; padding: 13px 18px; flex-shrink: 0; text-align: center; border-top: 3px solid rgba(255,255,255,.25); }
@@ -37,7 +37,7 @@
   .lang-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
   .lang-btn { width: 34px; height: 25px; padding: 0; border: 2px solid transparent; border-radius: 4px; background: none; cursor: pointer; overflow: hidden; line-height: 0; opacity: 0.5; transition: opacity .15s, border-color .15s; font-size: 11px; font-weight: 700; color: #555; }
   .lang-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .lang-btn.active { border-color: #2e7d4f; opacity: 1; }
+  .lang-btn.active { border-color: #117e09; opacity: 1; }
   .lang-btn:hover { opacity: 1; }
   /* Arabo (body.rtl): solo il testo delle etichette tradotte va in RTL e allineato a
      destra; l'impaginazione (colonne, header, mappa) resta invariata. Nomi/indirizzi
@@ -55,7 +55,7 @@
      "prossimi turni") viene tagliato da overflow:hidden invece di spingere fuori i servizi. */
   .body { display: grid; grid-template-columns: 1.45fr 1fr; grid-template-rows: minmax(0, 1fr); flex: 1; min-height: 0; }
   .left { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
-  .section-bar { background: #2e7d4f; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 6px 16px; flex-shrink: 0; }
+  .section-bar { background: #117e09; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 6px 16px; flex-shrink: 0; }
   /* La sezione "di turno oggi" si espande per occupare lo spazio rimasto: le CARD stesse
      crescono (flex) col contenuto centrato, così riempiono anche di sera con una sola
      farmacia. I "prossimi turni" sotto restano una lista compatta (flex:0). */
@@ -65,7 +65,7 @@
   /* Forte risalto rispetto ai "prossimi turni": testo e spaziature ampie. */
   .farm-card + .farm-card { margin-top: 26px; padding-top: 26px; border-top: 1px solid #e0e8e2; }
   .farm-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .farm-dist { font-size: 21px; font-weight: 800; color: #2e7d4f; white-space: nowrap; }
+  .farm-dist { font-size: 21px; font-weight: 800; color: #117e09; white-space: nowrap; }
   /* QR/link "naviga verso la farmacia": affiancato alla distanza, spazio già libero a destra
      del nome. QR sul kiosk (chi guarda il totem scansiona col proprio telefono); link diretto
      su mobile (chi guarda già dal telefono non ha bisogno di scansionare). */
@@ -75,7 +75,7 @@
   .farm-nav-link { font-size: 40px; text-decoration: none; line-height: 1; }
   .farm-hours { margin-top: 10px; font-size: 18px; font-weight: 700; color: #555; }
   .turno-name { font-size: 40px; font-weight: 800; color: #1a1a1a; line-height: 1.1; }
-  .turno-name.is-us { color: #2e7d4f; }
+  .turno-name.is-us { color: #117e09; }
   .turno-contact { margin-top: 6px; display: flex; flex-direction: column; gap: 2px; }
   .contact-row { font-size: 19px; color: #333; }
   .contact-row .c-name { font-weight: 700; color: #1a1a1a; }
@@ -84,7 +84,7 @@
   .contact-row a.c-tel { color: #1565c0; text-decoration: underline; }
   .turno-meta { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
   .badge-fine { background: #fff3cd; color: #856404; border: 1px solid #ffc107; border-radius: 4px; font-size: 11px; font-weight: 700; padding: 2px 8px; }
-  .badge-contorno { background: #e8f5e9; color: #2e7d4f; border: 1px solid #a5d6a7; border-radius: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; }
+  .badge-contorno { background: #e7f2e6; color: #117e09; border: 1px solid #a3d19e; border-radius: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; }
   .badge-straord { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; border-radius: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; }
   .badge-nota { background: #fce4ec; color: #880e4f; border: 1px solid #f48fb1; border-radius: 4px; font-size: 11px; padding: 2px 8px; }
   .prossimi { flex: 0 1 auto; overflow: hidden; }
@@ -92,12 +92,12 @@
   .next-item { display: flex; align-items: center; padding: 5px 16px; border-bottom: 1px solid #f0f4f1; gap: 10px; }
   .next-day { font-size: 11px; color: #888; width: 80px; flex-shrink: 0; }
   .next-name { font-size: 14px; color: #222; flex: 1; }
-  .next-name.is-us { color: #2e7d4f; font-weight: 700; }
+  .next-name.is-us { color: #117e09; font-weight: 700; }
   .next-badges { display: flex; gap: 4px; flex-shrink: 0; align-items: center; }
   .next-fine { font-size: 10px; color: #888; }
-  .next-cont { font-size: 10px; color: #2e7d4f; }
+  .next-cont { font-size: 10px; color: #117e09; }
   .next-mod { font-size: 10px; color: #e65100; font-weight: 600; }
-  .right { display: flex; flex-direction: column; min-height: 0; overflow: hidden; border-left: 2px solid #2e7d4f; background: #fff; }
+  .right { display: flex; flex-direction: column; min-height: 0; overflow: hidden; border-left: 2px solid #117e09; background: #fff; }
   /* La mappa è in fondo alla colonna e cresce (flex:1) per riempire lo spazio rimasto.
      Servizi e QR stanno in alto e sono sempre visibili; se lo spazio non basta (viewport
      basso) è la mappa in fondo a essere tagliata dall'overflow:hidden della colonna, non i
@@ -105,20 +105,20 @@
   .map-area { flex: 1; min-height: 320px; overflow: hidden; }
   .map-iframe { width: 100%; height: 100%; border: none; }
   .servizi-box { background: #1a3a28; color: #fff; padding: 12px 14px; flex-shrink: 0; }
-  .servizi-title { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #7ec8a0; margin-bottom: 8px; }
+  .servizi-title { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #88bf84; margin-bottom: 8px; }
   .servizi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-  .servizio-item { background: #2e7d4f; border-radius: 4px; padding: 5px 8px; font-size: 11px; font-weight: 700; text-align: center; color: #fff; }
+  .servizio-item { background: #117e09; border-radius: 4px; padding: 5px 8px; font-size: 11px; font-weight: 700; text-align: center; color: #fff; }
   /* Orari di apertura della NOSTRA farmacia: tabella settimanale sempre visibile (per legge
      va esposta all'esterno). Stesso tema verde del box servizi. La riga del giorno corrente
      è evidenziata. Dati editabili dal Gist (contenuti.json -> orari). */
-  .orari-box { background: #1a3a28; color: #fff; padding: 12px 14px; flex-shrink: 0; border-top: 1px solid #2e7d4f; }
-  .orari-box-title { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #7ec8a0; margin-bottom: 8px; }
+  .orari-box { background: #1a3a28; color: #fff; padding: 12px 14px; flex-shrink: 0; border-top: 1px solid #117e09; }
+  .orari-box-title { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: #88bf84; margin-bottom: 8px; }
   .orari-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 13px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
   .orari-row:last-child { border-bottom: none; }
-  .orari-row .g { font-weight: 700; color: #cfe9da; }
+  .orari-row .g { font-weight: 700; color: #cfe5ce; }
   .orari-row .h { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
   .orari-row .h.chiuso { color: #f0a0a0; font-style: italic; }
-  .orari-row.oggi { background: rgba(126,200,160,0.14); margin: 0 -8px; padding: 3px 8px; border-radius: 5px; border-bottom-color: transparent; }
+  .orari-row.oggi { background: rgba(136,191,132,0.14); margin: 0 -8px; padding: 3px 8px; border-radius: 5px; border-bottom-color: transparent; }
   .orari-row.oggi .g { color: #fff; }
   /* Banner annunci: stessa estetica del banner di galenico (DM Mono, palette calda, centrato) */
   /* Fascia annunci in evidenza: testo a scorrimento (ticker). Il testo scorre da destra
@@ -137,20 +137,20 @@
   .social-bar { background: #f0f4f1; border-top: 1px solid #dde8e0; padding: 7px 16px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
   .social-link { display: flex; align-items: center; gap: 6px; text-decoration: none; color: #333; font-size: 12px; font-weight: 600; }
   .social-icon { width: 22px; height: 22px; border-radius: 5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .social-icon.web { background: #2e7d4f; }
+  .social-icon.web { background: #117e09; }
   .social-icon.fb { background: #1877f2; }
   .social-icon.ig { background: linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888); }
   .social-icon svg { width: 13px; height: 13px; fill: #fff; }
   /* I 3 QR affiancati in un'unica riga: pensato per il totem orizzontale (schermo largo
      e basso), dove impilarli verticalmente tagliava l'ultimo. Ogni box è 1/3 di larghezza,
      col QR sopra e i testi sotto, centrati. Mostrati solo sul kiosk (renderQR). */
-  .qr-row { display: flex; border-top: 2px solid #2e7d4f; flex-shrink: 0; }
+  .qr-row { display: flex; border-top: 2px solid #117e09; flex-shrink: 0; }
   .qr-box { background: #fff; padding: 8px 10px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; flex: 1; min-width: 0; }
   .qr-box + .qr-box { border-left: 1px solid #dde8e0; }
   .qr-box .qr-img { width: 104px; height: 104px; flex-shrink: 0; }
   .qr-box .qr-img svg { width: 100%; height: 100%; display: block; }
   .qr-text { min-width: 0; }
-  .qr-text .qr-title { font-weight: 800; font-size: 13px; color: #2e7d4f; line-height: 1.15; }
+  .qr-text .qr-title { font-weight: 800; font-size: 13px; color: #117e09; line-height: 1.15; }
   .qr-text .qr-sub { font-size: 11px; color: #555; margin-top: 2px; }
   .footer { background: #1a1a1a; color: #aaa; font-size: 10px; padding: 5px 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
   .sync-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #4caf50; margin-right: 5px; vertical-align: middle; }
@@ -184,7 +184,7 @@
   }
 </style>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#2e7d4f">
+<meta name="theme-color" content="#117e09">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Turni">
@@ -204,11 +204,7 @@
 <div class="page">
   <div class="header">
     <div class="header-left">
-      <svg class="cross" viewBox="0 0 38 38">
-        <rect x="14" y="2" width="10" height="34" fill="#2e7d4f" rx="2"/>
-        <rect x="2" y="14" width="34" height="10" fill="#2e7d4f" rx="2"/>
-        <rect x="16" y="16" width="6" height="6" fill="#fff"/>
-      </svg>
+      <img class="cross" alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEcAAABHCAYAAABVsFofAAAAAXNSR0IArs4c6QAAA8hJREFUeAHtmk1IVFEUx+95zqhYhC0yECxCkD4WUbQXQnDRorCaRR8UoTPDTMIQrZTUCKtlNJM+daBNqwEXLiqMWhgu+9hEQVC50BHSapEF5sy7nRGe8+HMmTfO+yrOg+Hdc8+5X7/533vf3HkgHLj6pg9Io83e7vwARmPNjlPMrvB/qo/hEN8mw2E4BAHCxcphOAQBwsXKYTgEAcLFymE4BAHCxcphOAQBwsXKYTgEAcLFymE4BAHCxcoh4LCLCTAB0wk4dnhdbiSJRKLm2fOXgwK0gJDwvQbg4thY7FW5cmb6XbsgT7+Y6ZdCuyGlaJJC7k8LTTVz4EbqciWcUOhaC0q6L3cACKkt17Yj7bGjkUrb+JNaHUC11OWXg/f5tvWW65TTEw63CRCXiwx9tEiepVmugyNTYlhKmadoEPCxs6P9kaUkilTuKjiBwNVjCObMpn4CDPh8vvSmfIszXAUnLbU7heNF1byZUKOJwny2mQAT+CcJ2PrzoScYOq9poupdBzu9Fh8fqbWauKeSF4mozpR7yWhoaKh2Prl0SwjD7y2Vbg7ESmknPlpX8HIUVY9tu9XC4nIAn3r3UZ0x7JPw03BsFYF5D1tV1FO2qASxAyTcLxtYIgD1dhJVt3fdDTJZIszUbNvgxNXYcDU97/aHT21MSAnvqqnLaFnbppXRDhWL8/t7W3FK7tF9CGlWT1t595RbSK1s3GjdmpDdubFexTuTaxemzRqT65WDu1w9ngZe0QHgNj6jqvfmdNvKu21rzlYHMZ9cHsRp1KSXl0IZ19NW312tHL8/fFSAvJ6FAMmGOpjM2tamXAsnc+ilCTGVe7ajKLI/Go2uWoskWztOYfddwWDvkZSmPcUdarfeOwB4Eh97cEK37bi7as2JRCKNK7/XbqakFkIwG33LnAQqsv6SHUBy23BcObgbeZLJb8c1oZ3F9eU0/suwM7eDeJ78GbxKRzwW+9ITDPs0KVoVEJ8m1AeWH4BtfDt5HbLRmF/8+hB3owvrTWIi/4LZhlqlC9eZpUy+1EQzCLkNd6zG/DhrLEcX5ECg96AQcK5waLi+rCigRFqad7XrYDIxUsACfuYAtF+FZaywHZ1W3YHQJE6jruzAIAkKjHhh+8jo6N0f2XxnUo5NK1TN4ZRIH0KVTAkp39aA8lhVo6/R3jS5nEHDrTIBJmABAUcW5ErOeM06ftgKO0e38q102M4yDIegzXAYDkGAcLFyGA5BgHCxchgOQYBwsXIYDkGAcLFyGA5BgHCxchgOQYBwsXIYDkGAcLFyCDh/AXmv6vqvxONsAAAAAElFTkSuQmCC">
       <div>
         <div class="farm-name">Farm. Della Stazione</div>
         <div class="farm-info">
@@ -1113,7 +1109,7 @@ function renderMappa() {
     });
   };
   const { turno, key } = getTurnoAttivo();
-  if (turno && turno.t) aggiungi(turno.t, '#2e7d4f', t('shiftMap'), 11);
+  if (turno && turno.t) aggiungi(turno.t, '#117e09', t('shiftMap'), 11);
   if (turno && turno.c && statoConturno(key).aperto) aggiungi(turno.c, '#1565c0', t('conturno'), 10);
   const noi = POSIZIONI['Della Stazione'] || [44.1014, 9.8233];
   L.circleMarker(noi, { radius: 7, color: '#fff', weight: 2, fillColor: '#888', fillOpacity: 1 })
@@ -1246,7 +1242,7 @@ function renderSpot(s) {
     img.src = s.img;
     ov.appendChild(img);
   } else {
-    ov.style.background = s.sfondo || '#2e7d4f';
+    ov.style.background = s.sfondo || '#117e09';
     const div = document.createElement('div');
     div.className = 'spot-testo';
     div.style.color = s.colore || '#ffffff';
