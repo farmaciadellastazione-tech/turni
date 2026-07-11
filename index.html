@@ -17,7 +17,7 @@
   .page { display: flex; flex-direction: column; height: 100vh; }
   .header { background: #fff; border-bottom: 3px solid #117e09; padding: 10px 18px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .header-left { display: flex; align-items: center; gap: 12px; }
-  .cross { width: 38px; height: 38px; flex-shrink: 0; }
+  .cross { width: 46px; height: 46px; flex-shrink: 0; }
   .farm-name { font-size: 22px; font-weight: 700; color: #1a1a1a; line-height: 1; }
   .farm-info { font-size: 12px; color: #555; margin-top: 3px; display: flex; gap: 14px; }
   /* Logo WhatsApp accanto al numero: solo visivo (niente link, kiosk-safe come il 📞). */
@@ -204,11 +204,7 @@
 <div class="page">
   <div class="header">
     <div class="header-left">
-      <svg class="cross" viewBox="0 0 38 38">
-        <rect x="14" y="2" width="10" height="34" fill="#117e09" rx="2"/>
-        <rect x="2" y="14" width="34" height="10" fill="#117e09" rx="2"/>
-        <rect x="16" y="16" width="6" height="6" fill="#fff"/>
-      </svg>
+      <img class="cross" alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEcAAABHCAYAAABVsFofAAAAAXNSR0IArs4c6QAAA8hJREFUeAHtmk1IVFEUx+95zqhYhC0yECxCkD4WUbQXQnDRorCaRR8UoTPDTMIQrZTUCKtlNJM+daBNqwEXLiqMWhgu+9hEQVC50BHSapEF5sy7nRGe8+HMmTfO+yrOg+Hdc8+5X7/533vf3HkgHLj6pg9Io83e7vwARmPNjlPMrvB/qo/hEN8mw2E4BAHCxcphOAQBwsXKYTgEAcLFymE4BAHCxcphOAQBwsXKYTgEAcLFymE4BAHCxcoh4LCLCTAB0wk4dnhdbiSJRKLm2fOXgwK0gJDwvQbg4thY7FW5cmb6XbsgT7+Y6ZdCuyGlaJJC7k8LTTVz4EbqciWcUOhaC0q6L3cACKkt17Yj7bGjkUrb+JNaHUC11OWXg/f5tvWW65TTEw63CRCXiwx9tEiepVmugyNTYlhKmadoEPCxs6P9kaUkilTuKjiBwNVjCObMpn4CDPh8vvSmfIszXAUnLbU7heNF1byZUKOJwny2mQAT+CcJ2PrzoScYOq9poupdBzu9Fh8fqbWauKeSF4mozpR7yWhoaKh2Prl0SwjD7y2Vbg7ESmknPlpX8HIUVY9tu9XC4nIAn3r3UZ0x7JPw03BsFYF5D1tV1FO2qASxAyTcLxtYIgD1dhJVt3fdDTJZIszUbNvgxNXYcDU97/aHT21MSAnvqqnLaFnbppXRDhWL8/t7W3FK7tF9CGlWT1t595RbSK1s3GjdmpDdubFexTuTaxemzRqT65WDu1w9ngZe0QHgNj6jqvfmdNvKu21rzlYHMZ9cHsRp1KSXl0IZ19NW312tHL8/fFSAvJ6FAMmGOpjM2tamXAsnc+ilCTGVe7ajKLI/Go2uWoskWztOYfddwWDvkZSmPcUdarfeOwB4Eh97cEK37bi7as2JRCKNK7/XbqakFkIwG33LnAQqsv6SHUBy23BcObgbeZLJb8c1oZ3F9eU0/suwM7eDeJ78GbxKRzwW+9ITDPs0KVoVEJ8m1AeWH4BtfDt5HbLRmF/8+hB3owvrTWIi/4LZhlqlC9eZpUy+1EQzCLkNd6zG/DhrLEcX5ECg96AQcK5waLi+rCigRFqad7XrYDIxUsACfuYAtF+FZaywHZ1W3YHQJE6jruzAIAkKjHhh+8jo6N0f2XxnUo5NK1TN4ZRIH0KVTAkp39aA8lhVo6/R3jS5nEHDrTIBJmABAUcW5ErOeM06ftgKO0e38q102M4yDIegzXAYDkGAcLFyGA5BgHCxchgOQYBwsXIYDkGAcLFyGA5BgHCxchgOQYBwsXIYDkGAcLFyCDh/AXmv6vqvxONsAAAAAElFTkSuQmCC">
       <div>
         <div class="farm-name">Farm. Della Stazione</div>
         <div class="farm-info">
