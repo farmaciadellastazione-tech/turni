@@ -668,13 +668,19 @@ function getTurnoGiorno(key) {
   const base = TURNI_BASE[key] || null;
   const ov = overrides[key] || {};
   if (!base && !ov.t) return null;
+  // "modificato" deve segnalare uno scostamento reale dalla tabella annuale base, non il
+  // semplice fatto che l'automazione del bollettino settimanale abbia scritto un override:
+  // quest'ultima riscrive t/c ogni giorno anche quando coincidono col base (vedi
+  // apply-bollettino.mjs), quindi confrontare i valori invece di guardare solo la presenza.
+  const tDiff = ov.t !== undefined && ov.t !== (base ? base.t : null);
+  const cDiff = ov.c !== undefined && ov.c !== (base ? base.c : undefined);
   return {
     t: ov.t !== undefined ? ov.t : (base ? base.t : null),
     c: ov.c !== undefined ? ov.c : (base ? base.c : undefined),
     fineOra: ov.fineOra || '08:30',
     straord: ov.straord || null,
     nota: ov.nota || null,
-    modificato: !!(ov.t !== undefined || ov.c !== undefined || ov.fineOra || ov.straord || ov.nota)
+    modificato: !!(tDiff || cDiff || ov.fineOra || ov.straord || ov.nota)
   };
 }
 
