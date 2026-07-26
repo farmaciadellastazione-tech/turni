@@ -19,8 +19,7 @@
 import { pathToFileURL } from 'node:url';
 
 const GIST_ID = '8f699fa0fd4566b2bbb2805b76ad482e';
-const GIST_OWNER = 'farmaciadellastazione-tech';
-const RAW = (file) => `https://gist.githubusercontent.com/${GIST_OWNER}/${GIST_ID}/raw/${file}?t=${Date.now()}`;
+const GIST_API = `https://api.github.com/gists/${GIST_ID}`;
 
 // Prossimo sabato in formato YYYY-MM-DD (oggi stesso se è sabato).
 export function prossimoSabato(oggi) {
@@ -50,15 +49,23 @@ export function verificaCopertura({ overrides, sabato, oggi }) {
 }
 
 async function main() {
-  const leggi = async (file) => {
-    const r = await fetch(RAW(file));
-    if (!r.ok) throw new Error(`${file}: HTTP ${r.status}`);
-    return r.json();
-  };
-
+  // Letto dall'API del Gist (non dal raw CDN gist.githubusercontent.com): l'API
+  // risponde con il contenuto corrente senza il ritardo di propagazione della
+  // CDN, che nella stessa run può ancora servire la versione precedente per
+  // qualche secondo dopo il PATCH fatto dagli step di apply — falso allarme
+  // osservato il 24/07/2026.
   let overrides, sabato;
   try {
-    [{ overrides }, sabato] = await Promise.all([leggi('turni-overrides.json'), leggi('sabato.json')]);
+    const r = await fetch(GIST_API);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const gist = await r.json();
+    const leggi = (file) => {
+      const content = gist.files?.[file]?.content;
+      if (content === undefined) throw new Error(`${file}: file assente nel Gist`);
+      return JSON.parse(content);
+    };
+    ({ overrides } = leggi('turni-overrides.json'));
+    sabato = leggi('sabato.json');
   } catch (e) {
     console.error(`Gist non leggibile: ${e.message}`);
     return 1;
