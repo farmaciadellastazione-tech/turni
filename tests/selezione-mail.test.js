@@ -52,6 +52,15 @@ describe('allegatiBollettino — PDF dei turni solo dalla mail giusta', () => {
   it('mail di risposta sui turni senza allegati → nessun candidato', () => {
     expect(allegatiBollettino('R: TURNI COMUNE DELLA SPEZIA DAL 26 GIUGNO 2026 AL 10 LUGLIO 2026', ['image001.png'])).toEqual([]);
   });
+
+  // Bug reale (18-21 ago 2026): questo sollecito amministrativo del Comune
+  // contiene sia "TURNI" che "SPEZIA" nell'oggetto ma non è il bollettino —
+  // veniva scelto comunque, il PDF non aveva il formato turno-per-giorno e
+  // il parser estraeva 0 giorni (run rosso per 4 giorni finché non è arrivata
+  // la vera mail turni). Il bollettino vero ha sempre un intervallo "DAL … AL …".
+  it('ignora un sollecito amministrativo che nomina TURNI/SPEZIA senza intervallo DAL...AL...', () => {
+    expect(allegatiBollettino('SOLLECITO RISPOSTA TURNI 2027 COMUNE DELLA SPEZIA', ['calendario 2027.pdf'])).toEqual([]);
+  });
 });
 
 describe('allegatiSabato — solo i .doc "SABATO POMERIGGIO"', () => {
