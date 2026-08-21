@@ -1094,6 +1094,9 @@ function renderNext() {
 function initMappa() {
   if (mappa || typeof L === 'undefined' || !document.getElementById('map')) return;
   mappa = L.map('map', { attributionControl: true }).setView([44.107, 9.83], 13);
+  // Niente link "Leaflet" cliccabile nell'angolo della mappa: su un totem touch
+  // un tocco per sbaglio porterebbe via il browser dalla bacheca verso leafletjs.com.
+  mappa.attributionControl.setPrefix('');
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mappa);
   layerMarker = L.layerGroup().addTo(mappa);
 }
