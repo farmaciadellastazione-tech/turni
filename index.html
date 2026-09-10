@@ -136,11 +136,19 @@
      nascosta perché cliccare un link porta fuori dalla bacheca. */
   .social-bar { background: #f0f4f1; border-top: 1px solid #dde8e0; padding: 7px 16px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
   .social-link { display: flex; align-items: center; gap: 6px; text-decoration: none; color: #333; font-size: 12px; font-weight: 600; }
+  /* Il pulsante "Condividi" è un <button>, non un <a>: reset dei default del browser
+     per farlo combaciare con gli altri .social-link. */
+  button.social-link { border: none; background: none; padding: 0; font-family: inherit; cursor: pointer; }
   .social-icon { width: 22px; height: 22px; border-radius: 5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .social-icon.web { background: #117e09; }
   .social-icon.fb { background: #1877f2; }
   .social-icon.ig { background: linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888); }
+  .social-icon.share { background: #555; }
   .social-icon svg { width: 13px; height: 13px; fill: #fff; }
+  /* Conferma non invasiva dopo "Condividi" (usata solo se il telefono non supporta la
+     condivisione nativa e si ricade sulla copia negli appunti). */
+  .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%) translateY(10px); background: #1a1a1a; color: #fff; font-size: 13px; font-weight: 600; padding: 10px 18px; border-radius: 8px; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; z-index: 500; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   /* I 3 QR affiancati in un'unica riga: pensato per il totem orizzontale (schermo largo
      e basso), dove impilarli verticalmente tagliava l'ultimo. Ogni box è 1/3 di larghezza,
      col QR sopra e i testi sotto, centrati. Mostrati solo sul kiosk (renderQR). */
@@ -256,6 +264,13 @@
       <!-- Social: visibile solo su mobile (vedi isMobile()); sul kiosk i link sono nascosti
            perché cliccarli porta fuori dalla bacheca. -->
       <div class="social-bar" id="socialBar" style="display:none">
+        <!-- Condividi il link della bacheca (non i nostri profili social, quelli sono i
+             link sotto): apre il pannello di condivisione nativo del telefono, con dentro
+             qualunque app l'utente abbia (WhatsApp, Telegram, Messaggi, Mail, ...). -->
+        <button type="button" class="social-link" id="shareBtn" onclick="condividiLink()">
+          <span class="social-icon share"><svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L7.04 9.81C6.5 9.31 5.79 9 5 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg></span>
+          <span id="shareBtnLabel">Condividi</span>
+        </button>
         <a class="social-link" href="https://farmaciadellastazionespezia.it" target="_blank">
           <span class="social-icon web"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></span>
           farmaciadellastazionespezia.it
@@ -332,6 +347,7 @@
 <!-- Spot pubblicitario a tutto schermo (vedi .spot-overlay). Mostrato solo sul kiosk;
      tap/click per chiuderlo in anticipo. -->
 <div class="spot-overlay" id="spotOverlay" onclick="chiudiSpotManuale()"></div>
+<div class="toast" id="toast"></div>
 
 <script>
 // --- Kiosk: blocca ogni zoom della PAGINA (non della mappa Leaflet, che usa i suoi handler) ---
@@ -369,22 +385,22 @@ const SERVIZI_DEFAULT = ['Holter ECG','Holter Pressorio','Elettrocardiogramma','
 // --- Multilingua (bandierine). Si traducono solo le etichette UI, non i nomi/indirizzi
 // delle farmacie né gli annunci (italiano). L'arabo è RTL. ---
 const I18N = {
-  it: { onDuty:'Farmacia di turno', now:'Adesso', conturno:'Conturno', open:'aperto', upcoming:'Prossimi turni', services:'Servizi', communications:'Comunicazioni', shiftEnd:'Fine turno:', noData:'Nessun dato', modified:'modificato', shiftMap:'Turno', us:'Noi', weekRange:'Lun–Sab', updated:'Aggiornato', offline:'Dati locali (offline)', legal:'Il servizio a battenti chiusi è solo per medicinali urgenti · Diritto fisso: DIURNO €7,50 – NOTTURNO €10,00 (Art. 9 D.M. 22/09/2017)' },
-  en: { onDuty:'Pharmacy on duty', now:'Now', conturno:'Co-duty', open:'open', upcoming:'Upcoming shifts', services:'Services', communications:'Announcements', shiftEnd:'Shift ends:', noData:'No data', modified:'modified', shiftMap:'On duty', us:'Us', weekRange:'Mon–Sat', updated:'Updated', offline:'Local data (offline)', legal:'Closed-door service for urgent medicines only · Fixed fee: DAY €7.50 – NIGHT €10.00 (Art. 9 D.M. 22/09/2017)' },
-  fr: { onDuty:'Pharmacie de garde', now:'Maintenant', conturno:'Pharmacie de soutien', open:'ouvert', upcoming:'Prochaines gardes', services:'Services', communications:'Communications', shiftEnd:'Fin de garde :', noData:'Aucune donnée', modified:'modifié', shiftMap:'De garde', us:'Nous', weekRange:'Lun–Sam', updated:'Mis à jour', offline:'Données locales (hors ligne)', legal:'Service à porte fermée uniquement pour médicaments urgents · Forfait : JOUR 7,50 € – NUIT 10,00 € (Art. 9 D.M. 22/09/2017)' },
-  es: { onDuty:'Farmacia de guardia', now:'Ahora', conturno:'Farmacia de apoyo', open:'abierto', upcoming:'Próximas guardias', services:'Servicios', communications:'Comunicaciones', shiftEnd:'Fin de guardia:', noData:'Sin datos', modified:'modificado', shiftMap:'De guardia', us:'Nosotros', weekRange:'Lun–Sáb', updated:'Actualizado', offline:'Datos locales (sin conexión)', legal:'Servicio a puerta cerrada solo para medicamentos urgentes · Tarifa fija: DÍA €7,50 – NOCHE €10,00 (Art. 9 D.M. 22/09/2017)' },
-  de: { onDuty:'Apotheke im Dienst', now:'Jetzt', conturno:'Zusatzdienst', open:'geöffnet', upcoming:'Nächste Dienste', services:'Leistungen', communications:'Mitteilungen', shiftEnd:'Dienstende:', noData:'Keine Daten', modified:'geändert', shiftMap:'Dienst', us:'Wir', weekRange:'Mo–Sa', updated:'Aktualisiert', offline:'Lokale Daten (offline)', legal:'Notdienst bei geschlossener Tür nur für dringende Medikamente · Festgebühr: TAG 7,50 € – NACHT 10,00 € (Art. 9 D.M. 22/09/2017)' },
-  pt: { onDuty:'Farmácia de plantão', now:'Agora', conturno:'Farmácia de apoio', open:'aberto', upcoming:'Próximos plantões', services:'Serviços', communications:'Comunicações', shiftEnd:'Fim do plantão:', noData:'Sem dados', modified:'modificado', shiftMap:'Plantão', us:'Nós', weekRange:'Seg–Sáb', updated:'Atualizado', offline:'Dados locais (offline)', legal:'Serviço de porta fechada apenas para medicamentos urgentes · Taxa fixa: DIA €7,50 – NOITE €10,00 (Art. 9 D.M. 22/09/2017)' },
-  zh: { onDuty:'值班药房', now:'现在', conturno:'协助药房', open:'营业中', upcoming:'接下来的值班', services:'服务', communications:'公告', shiftEnd:'值班结束：', noData:'无数据', modified:'已修改', shiftMap:'值班', us:'我们', weekRange:'周一至周六', updated:'已更新', offline:'本地数据（离线）', legal:'闭门服务仅限急用药品 · 固定费用：白天 €7,50 – 夜间 €10,00（Art. 9 D.M. 22/09/2017）' },
-  ar: { onDuty:'الصيدلية المناوبة', now:'الآن', conturno:'صيدلية مساندة', open:'مفتوحة', upcoming:'المناوبات القادمة', services:'الخدمات', communications:'إعلانات', shiftEnd:'انتهاء المناوبة:', noData:'لا توجد بيانات', modified:'معدّل', shiftMap:'المناوبة', us:'نحن', weekRange:'الإثنين–السبت', updated:'تم التحديث', offline:'بيانات محلية (دون اتصال)', legal:'الخدمة عبر الباب المغلق للأدوية العاجلة فقط · رسم ثابت: نهاراً €7,50 – ليلاً €10,00 (المادة 9 من المرسوم الوزاري 22/09/2017)' },
-  ro: { onDuty:'Farmacie de gardă', now:'Acum', conturno:'Farmacie de sprijin', open:'deschis', upcoming:'Gărzi următoare', services:'Servicii', communications:'Anunțuri', shiftEnd:'Sfârșit gardă:', noData:'Fără date', modified:'modificat', shiftMap:'De gardă', us:'Noi', weekRange:'Lun–Sâm', updated:'Actualizat', offline:'Date locale (offline)', legal:'Serviciu cu ușa închisă doar pentru medicamente urgente · Taxă fixă: ZI €7,50 – NOAPTE €10,00 (Art. 9 D.M. 22/09/2017)' },
-  sq: { onDuty:'Farmaci kujdestare', now:'Tani', conturno:'Farmaci mbështetëse', open:'hapur', upcoming:'Kujdestaritë e ardhshme', services:'Shërbime', communications:'Njoftime', shiftEnd:'Mbarimi i turnit:', noData:'Pa të dhëna', modified:'ndryshuar', shiftMap:'Kujdestare', us:'Ne', weekRange:'Hën–Sht', updated:'Përditësuar', offline:'Të dhëna lokale (offline)', legal:'Shërbim me derë të mbyllur vetëm për barna urgjente · Tarifë fikse: DITË €7,50 – NATË €10,00 (Art. 9 D.M. 22/09/2017)' },
-  uk: { onDuty:'Чергова аптека', now:'Зараз', conturno:'Допоміжна аптека', open:'відчинено', upcoming:'Наступні чергування', services:'Послуги', communications:'Оголошення', shiftEnd:'Кінець чергування:', noData:'Немає даних', modified:'змінено', shiftMap:'Чергова', us:'Ми', weekRange:'Пн–Сб', updated:'Оновлено', offline:'Локальні дані (офлайн)', legal:'Обслуговування за зачиненими дверима лише для невідкладних ліків · Фіксована плата: ДЕНЬ €7,50 – НІЧ €10,00 (Art. 9 D.M. 22/09/2017)' },
-  ru: { onDuty:'Дежурная аптека', now:'Сейчас', conturno:'Вспомогательная аптека', open:'открыто', upcoming:'Следующие дежурства', services:'Услуги', communications:'Объявления', shiftEnd:'Конец дежурства:', noData:'Нет данных', modified:'изменено', shiftMap:'Дежурная', us:'Мы', weekRange:'Пн–Сб', updated:'Обновлено', offline:'Локальные данные (офлайн)', legal:'Обслуживание при закрытых дверях только для срочных лекарств · Фиксированная плата: ДЕНЬ €7,50 – НОЧЬ €10,00 (Art. 9 D.M. 22/09/2017)' },
-  bn: { onDuty:'কর্তব্যরত ফার্মেসি', now:'এখন', conturno:'সহায়ক ফার্মেসি', open:'খোলা', upcoming:'পরবর্তী পালা', services:'সেবা', communications:'ঘোষণা', shiftEnd:'পালা শেষ:', noData:'কোনো তথ্য নেই', modified:'পরিবর্তিত', shiftMap:'কর্তব্যরত', us:'আমরা', weekRange:'সোম–শনি', updated:'হালনাগাদ', offline:'স্থানীয় তথ্য (অফলাইন)', legal:'বন্ধ দরজার সেবা শুধুমাত্র জরুরি ওষুধের জন্য · নির্ধারিত ফি: দিন €7,50 – রাত €10,00 (Art. 9 D.M. 22/09/2017)' },
-  hi: { onDuty:'ड्यूटी पर फार्मेसी', now:'अभी', conturno:'सहायक फार्मेसी', open:'खुला', upcoming:'आगामी ड्यूटी', services:'सेवाएँ', communications:'सूचनाएँ', shiftEnd:'ड्यूटी समाप्त:', noData:'कोई डेटा नहीं', modified:'संशोधित', shiftMap:'ड्यूटी पर', us:'हम', weekRange:'सोम–शनि', updated:'अपडेट किया गया', offline:'स्थानीय डेटा (ऑफ़लाइन)', legal:'बंद दरवाज़े की सेवा केवल आपातकालीन दवाओं के लिए · निश्चित शुल्क: दिन €7,50 – रात €10,00 (Art. 9 D.M. 22/09/2017)' },
-  ja: { onDuty:'当番薬局', now:'現在', conturno:'補助薬局', open:'営業中', upcoming:'次の当番', services:'サービス', communications:'お知らせ', shiftEnd:'当番終了:', noData:'データなし', modified:'変更済み', shiftMap:'当番', us:'当店', weekRange:'月–土', updated:'更新', offline:'ローカルデータ（オフライン）', legal:'閉店時の対応は緊急の医薬品のみ · 定額料金：昼 €7,50 – 夜 €10,00（Art. 9 D.M. 22/09/2017）' },
-  ko: { onDuty:'당번 약국', now:'지금', conturno:'보조 약국', open:'영업 중', upcoming:'다음 당번', services:'서비스', communications:'공지', shiftEnd:'당번 종료:', noData:'데이터 없음', modified:'수정됨', shiftMap:'당번', us:'본 약국', weekRange:'월–토', updated:'업데이트됨', offline:'로컬 데이터(오프라인)', legal:'닫힌 문 서비스는 긴급 의약품만 해당 · 고정 요금: 주간 €7,50 – 야간 €10,00 (Art. 9 D.M. 22/09/2017)' }
+  it: { onDuty:'Farmacia di turno', now:'Adesso', conturno:'Conturno', open:'aperto', upcoming:'Prossimi turni', services:'Servizi', communications:'Comunicazioni', shiftEnd:'Fine turno:', noData:'Nessun dato', modified:'modificato', shiftMap:'Turno', us:'Noi', weekRange:'Lun–Sab', updated:'Aggiornato', offline:'Dati locali (offline)', legal:'Il servizio a battenti chiusi è solo per medicinali urgenti · Diritto fisso: DIURNO €7,50 – NOTTURNO €10,00 (Art. 9 D.M. 22/09/2017)', share:'Condividi', shareText:'Farmacia di turno a La Spezia', shareCopied:'Link copiato' },
+  en: { onDuty:'Pharmacy on duty', now:'Now', conturno:'Co-duty', open:'open', upcoming:'Upcoming shifts', services:'Services', communications:'Announcements', shiftEnd:'Shift ends:', noData:'No data', modified:'modified', shiftMap:'On duty', us:'Us', weekRange:'Mon–Sat', updated:'Updated', offline:'Local data (offline)', legal:'Closed-door service for urgent medicines only · Fixed fee: DAY €7.50 – NIGHT €10.00 (Art. 9 D.M. 22/09/2017)', share:'Share', shareText:'Pharmacy on duty in La Spezia', shareCopied:'Link copied' },
+  fr: { onDuty:'Pharmacie de garde', now:'Maintenant', conturno:'Pharmacie de soutien', open:'ouvert', upcoming:'Prochaines gardes', services:'Services', communications:'Communications', shiftEnd:'Fin de garde :', noData:'Aucune donnée', modified:'modifié', shiftMap:'De garde', us:'Nous', weekRange:'Lun–Sam', updated:'Mis à jour', offline:'Données locales (hors ligne)', legal:'Service à porte fermée uniquement pour médicaments urgents · Forfait : JOUR 7,50 € – NUIT 10,00 € (Art. 9 D.M. 22/09/2017)', share:'Partager', shareText:'Pharmacie de garde à La Spezia', shareCopied:'Lien copié' },
+  es: { onDuty:'Farmacia de guardia', now:'Ahora', conturno:'Farmacia de apoyo', open:'abierto', upcoming:'Próximas guardias', services:'Servicios', communications:'Comunicaciones', shiftEnd:'Fin de guardia:', noData:'Sin datos', modified:'modificado', shiftMap:'De guardia', us:'Nosotros', weekRange:'Lun–Sáb', updated:'Actualizado', offline:'Datos locales (sin conexión)', legal:'Servicio a puerta cerrada solo para medicamentos urgentes · Tarifa fija: DÍA €7,50 – NOCHE €10,00 (Art. 9 D.M. 22/09/2017)', share:'Compartir', shareText:'Farmacia de guardia en La Spezia', shareCopied:'Enlace copiado' },
+  de: { onDuty:'Apotheke im Dienst', now:'Jetzt', conturno:'Zusatzdienst', open:'geöffnet', upcoming:'Nächste Dienste', services:'Leistungen', communications:'Mitteilungen', shiftEnd:'Dienstende:', noData:'Keine Daten', modified:'geändert', shiftMap:'Dienst', us:'Wir', weekRange:'Mo–Sa', updated:'Aktualisiert', offline:'Lokale Daten (offline)', legal:'Notdienst bei geschlossener Tür nur für dringende Medikamente · Festgebühr: TAG 7,50 € – NACHT 10,00 € (Art. 9 D.M. 22/09/2017)', share:'Teilen', shareText:'Apotheke im Dienst in La Spezia', shareCopied:'Link kopiert' },
+  pt: { onDuty:'Farmácia de plantão', now:'Agora', conturno:'Farmácia de apoio', open:'aberto', upcoming:'Próximos plantões', services:'Serviços', communications:'Comunicações', shiftEnd:'Fim do plantão:', noData:'Sem dados', modified:'modificado', shiftMap:'Plantão', us:'Nós', weekRange:'Seg–Sáb', updated:'Atualizado', offline:'Dados locais (offline)', legal:'Serviço de porta fechada apenas para medicamentos urgentes · Taxa fixa: DIA €7,50 – NOITE €10,00 (Art. 9 D.M. 22/09/2017)', share:'Partilhar', shareText:'Farmácia de plantão em La Spezia', shareCopied:'Link copiado' },
+  zh: { onDuty:'值班药房', now:'现在', conturno:'协助药房', open:'营业中', upcoming:'接下来的值班', services:'服务', communications:'公告', shiftEnd:'值班结束：', noData:'无数据', modified:'已修改', shiftMap:'值班', us:'我们', weekRange:'周一至周六', updated:'已更新', offline:'本地数据（离线）', legal:'闭门服务仅限急用药品 · 固定费用：白天 €7,50 – 夜间 €10,00（Art. 9 D.M. 22/09/2017）', share:'分享', shareText:'拉斯佩齐亚值班药房', shareCopied:'链接已复制' },
+  ar: { onDuty:'الصيدلية المناوبة', now:'الآن', conturno:'صيدلية مساندة', open:'مفتوحة', upcoming:'المناوبات القادمة', services:'الخدمات', communications:'إعلانات', shiftEnd:'انتهاء المناوبة:', noData:'لا توجد بيانات', modified:'معدّل', shiftMap:'المناوبة', us:'نحن', weekRange:'الإثنين–السبت', updated:'تم التحديث', offline:'بيانات محلية (دون اتصال)', legal:'الخدمة عبر الباب المغلق للأدوية العاجلة فقط · رسم ثابت: نهاراً €7,50 – ليلاً €10,00 (المادة 9 من المرسوم الوزاري 22/09/2017)', share:'مشاركة', shareText:'الصيدلية المناوبة في لا سبيتسيا', shareCopied:'تم نسخ الرابط' },
+  ro: { onDuty:'Farmacie de gardă', now:'Acum', conturno:'Farmacie de sprijin', open:'deschis', upcoming:'Gărzi următoare', services:'Servicii', communications:'Anunțuri', shiftEnd:'Sfârșit gardă:', noData:'Fără date', modified:'modificat', shiftMap:'De gardă', us:'Noi', weekRange:'Lun–Sâm', updated:'Actualizat', offline:'Date locale (offline)', legal:'Serviciu cu ușa închisă doar pentru medicamente urgente · Taxă fixă: ZI €7,50 – NOAPTE €10,00 (Art. 9 D.M. 22/09/2017)', share:'Distribuie', shareText:'Farmacia de gardă din La Spezia', shareCopied:'Link copiat' },
+  sq: { onDuty:'Farmaci kujdestare', now:'Tani', conturno:'Farmaci mbështetëse', open:'hapur', upcoming:'Kujdestaritë e ardhshme', services:'Shërbime', communications:'Njoftime', shiftEnd:'Mbarimi i turnit:', noData:'Pa të dhëna', modified:'ndryshuar', shiftMap:'Kujdestare', us:'Ne', weekRange:'Hën–Sht', updated:'Përditësuar', offline:'Të dhëna lokale (offline)', legal:'Shërbim me derë të mbyllur vetëm për barna urgjente · Tarifë fikse: DITË €7,50 – NATË €10,00 (Art. 9 D.M. 22/09/2017)', share:'Shpërndaje', shareText:'Farmacia kujdestare në La Spezia', shareCopied:'Lidhja u kopjua' },
+  uk: { onDuty:'Чергова аптека', now:'Зараз', conturno:'Допоміжна аптека', open:'відчинено', upcoming:'Наступні чергування', services:'Послуги', communications:'Оголошення', shiftEnd:'Кінець чергування:', noData:'Немає даних', modified:'змінено', shiftMap:'Чергова', us:'Ми', weekRange:'Пн–Сб', updated:'Оновлено', offline:'Локальні дані (офлайн)', legal:'Обслуговування за зачиненими дверима лише для невідкладних ліків · Фіксована плата: ДЕНЬ €7,50 – НІЧ €10,00 (Art. 9 D.M. 22/09/2017)', share:'Поділитися', shareText:'Чергова аптека в Ла-Специї', shareCopied:'Посилання скопійовано' },
+  ru: { onDuty:'Дежурная аптека', now:'Сейчас', conturno:'Вспомогательная аптека', open:'открыто', upcoming:'Следующие дежурства', services:'Услуги', communications:'Объявления', shiftEnd:'Конец дежурства:', noData:'Нет данных', modified:'изменено', shiftMap:'Дежурная', us:'Мы', weekRange:'Пн–Сб', updated:'Обновлено', offline:'Локальные данные (офлайн)', legal:'Обслуживание при закрытых дверях только для срочных лекарств · Фиксированная плата: ДЕНЬ €7,50 – НОЧЬ €10,00 (Art. 9 D.M. 22/09/2017)', share:'Поделиться', shareText:'Дежурная аптека в Ла-Специи', shareCopied:'Ссылка скопирована' },
+  bn: { onDuty:'কর্তব্যরত ফার্মেসি', now:'এখন', conturno:'সহায়ক ফার্মেসি', open:'খোলা', upcoming:'পরবর্তী পালা', services:'সেবা', communications:'ঘোষণা', shiftEnd:'পালা শেষ:', noData:'কোনো তথ্য নেই', modified:'পরিবর্তিত', shiftMap:'কর্তব্যরত', us:'আমরা', weekRange:'সোম–শনি', updated:'হালনাগাদ', offline:'স্থানীয় তথ্য (অফলাইন)', legal:'বন্ধ দরজার সেবা শুধুমাত্র জরুরি ওষুধের জন্য · নির্ধারিত ফি: দিন €7,50 – রাত €10,00 (Art. 9 D.M. 22/09/2017)', share:'শেয়ার করুন', shareText:'লা স্পেৎসিয়ায় কর্তব্যরত ফার্মেসি', shareCopied:'লিংক কপি হয়েছে' },
+  hi: { onDuty:'ड्यूटी पर फार्मेसी', now:'अभी', conturno:'सहायक फार्मेसी', open:'खुला', upcoming:'आगामी ड्यूटी', services:'सेवाएँ', communications:'सूचनाएँ', shiftEnd:'ड्यूटी समाप्त:', noData:'कोई डेटा नहीं', modified:'संशोधित', shiftMap:'ड्यूटी पर', us:'हम', weekRange:'सोम–शनि', updated:'अपडेट किया गया', offline:'स्थानीय डेटा (ऑफ़लाइन)', legal:'बंद दरवाज़े की सेवा केवल आपातकालीन दवाओं के लिए · निश्चित शुल्क: दिन €7,50 – रात €10,00 (Art. 9 D.M. 22/09/2017)', share:'साझा करें', shareText:'ला स्पेत्सिया में ड्यूटी पर फार्मेसी', shareCopied:'लिंक कॉपी हो गया' },
+  ja: { onDuty:'当番薬局', now:'現在', conturno:'補助薬局', open:'営業中', upcoming:'次の当番', services:'サービス', communications:'お知らせ', shiftEnd:'当番終了:', noData:'データなし', modified:'変更済み', shiftMap:'当番', us:'当店', weekRange:'月–土', updated:'更新', offline:'ローカルデータ（オフライン）', legal:'閉店時の対応は緊急の医薬品のみ · 定額料金：昼 €7,50 – 夜 €10,00（Art. 9 D.M. 22/09/2017）', share:'共有', shareText:'ラ・スペツィアの当番薬局', shareCopied:'リンクをコピーしました' },
+  ko: { onDuty:'당번 약국', now:'지금', conturno:'보조 약국', open:'영업 중', upcoming:'다음 당번', services:'서비스', communications:'공지', shiftEnd:'당번 종료:', noData:'데이터 없음', modified:'수정됨', shiftMap:'당번', us:'본 약국', weekRange:'월–토', updated:'업데이트됨', offline:'로컬 데이터(오프라인)', legal:'닫힌 문 서비스는 긴급 의약품만 해당 · 고정 요금: 주간 €7,50 – 야간 €10,00 (Art. 9 D.M. 22/09/2017)', share:'공유', shareText:'라스페치아 당번 약국', shareCopied:'링크가 복사되었습니다' }
 };
 // QR tessera fedeltà (portale Consorzio InFarmacia). Testi del riquadro [titolo, sottotitolo].
 const FIDELITY_URL = 'https://qrkit.co/eCooTC';
@@ -569,6 +585,7 @@ function applyLang() {
   document.getElementById('annunciTitle').textContent = '• ' + t('communications') + ' •';
   renderOrari();
   document.getElementById('footerLegal').textContent = t('legal');
+  document.getElementById('shareBtnLabel').textContent = t('share');
   const q = I18N_QR[LANG] || I18N_QR.it;
   document.getElementById('qrTitle').textContent = q[0];
   document.getElementById('qrSub').textContent = q[1];
@@ -598,6 +615,29 @@ function setLang(l) {
     if (l !== 'it') langResetTimer = setTimeout(() => setLang('it'), 90000);
   }
   applyLang();
+}
+
+// Pulsante "Condividi" della social-bar (solo mobile): apre il pannello di condivisione
+// nativo del telefono con il link della bacheca. Se il browser non lo supporta (raro,
+// qualche WebView datata) si ricade sulla copia negli appunti con un piccolo toast.
+async function condividiLink() {
+  if (navigator.share) {
+    try { await navigator.share({ title: document.title, text: t('shareText'), url: TURNI_URL }); }
+    catch (e) { /* utente ha annullato la condivisione: nessuna azione */ }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(TURNI_URL);
+    mostraToast(t('shareCopied'));
+  } catch (e) { /* niente Web Share né clipboard disponibili: nessuna azione */ }
+}
+let toastTimer = null;
+function mostraToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
 }
 
 async function loadBase() {
