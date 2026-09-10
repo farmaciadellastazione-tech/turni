@@ -12,8 +12,15 @@
 
 // PDF di bollettino: solo dalla mail dei turni, escludendo un eventuale
 // elenco sabato inviato in PDF (va al flusso sabato, non a parseBulletin).
+// Oltre a "TURNI"/"SPEZIA" si richiede l'intervallo "DAL … AL …", sempre
+// presente nell'oggetto del bollettino vero: senza, mail amministrative che
+// nominano solo di sfuggita turni e Spezia (es. un sollecito del Comune sul
+// calendario dell'anno dopo) passerebbero il filtro e, non avendo il formato
+// turno-per-giorno, farebbero estrarre 0 giorni al parser (bug reale, 4 run
+// rossi consecutivi ad ago 2026 prima che arrivasse la mail vera).
 export function allegatiBollettino(oggetto, nomiAllegati) {
-  if (!/\bTURNI\b/i.test(oggetto || '') || !/SPEZIA/i.test(oggetto || '')) return [];
+  const ogg = oggetto || '';
+  if (!/\bTURNI\b/i.test(ogg) || !/SPEZIA/i.test(ogg) || !/\bDAL\b.*\bAL\b/i.test(ogg)) return [];
   return (nomiAllegati || []).filter(n => /\.pdf$/i.test(n || '') && !/SABATO/i.test(n));
 }
 
