@@ -7,14 +7,7 @@
     "Analisi del sangue",
     "CUP"
   ],
-  "annunci": [
-    {
-      "testo": "chiusi per ferie dal 14 al 17 AGOSTO",
-      "da": "2026-07-03",
-      "a": "2026-08-17",
-      "evidenza": true
-    }
-  ],
+  "annunci": [],
   "ticker": {
     "scorre": true,
     "velocita": 220
