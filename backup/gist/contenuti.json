@@ -7,7 +7,14 @@
     "Analisi del sangue",
     "CUP"
   ],
-  "annunci": [],
+  "annunci": [
+    {
+      "testo": "Martedi 29 Settembre Giornata Bionike",
+      "da": "2026-09-11",
+      "a": "2026-09-29",
+      "evidenza": true
+    }
+  ],
   "ticker": {
     "scorre": true,
     "velocita": 220
