@@ -171,6 +171,38 @@
   .spot-overlay.visibile { opacity: 1; visibility: visible; }
   .spot-img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
   .spot-testo { font-family: 'Segoe UI', Arial, sans-serif; font-weight: 800; font-size: 6vw; line-height: 1.2; text-align: center; padding: 5vw; }
+  /* Ricerca turni: pulsante flottante sempre visibile (kiosk e mobile) che apre un pannello
+     con due ricerche - "per data" (turno di un giorno qualsiasi) e "per farmacia" (prossimi
+     turni di una farmacia scelta). Sopra a tutto, anche allo spot pubblicitario (che viene
+     messo in pausa mentre il pannello è aperto, vedi apriRicerca/chiudiRicerca).
+     Sul totem (schermo grande, nessuno lo sta cercando) è un pill con etichetta e un lieve
+     "respiro" per farsi notare; su mobile torna un'icona sola per non rubare spazio. */
+  .search-fab { position: fixed; right: 22px; bottom: 22px; display: flex; align-items: center; gap: 10px; padding: 14px 24px 14px 18px; border-radius: 999px; background: #117e09; color: #fff; border: none; font-family: inherit; font-size: 17px; font-weight: 700; box-shadow: 0 4px 16px rgba(0,0,0,.35); cursor: pointer; z-index: 10001; touch-action: manipulation; animation: search-fab-respiro 3s ease-out infinite; }
+  .search-fab .search-fab-icon { font-size: 24px; }
+  @keyframes search-fab-respiro {
+    0% { box-shadow: 0 4px 16px rgba(0,0,0,.35), 0 0 0 0 rgba(17,126,9,.55); }
+    70% { box-shadow: 0 4px 16px rgba(0,0,0,.35), 0 0 0 16px rgba(17,126,9,0); }
+    100% { box-shadow: 0 4px 16px rgba(0,0,0,.35), 0 0 0 0 rgba(17,126,9,0); }
+  }
+  @media (prefers-reduced-motion: reduce) { .search-fab { animation: none; } }
+  .search-overlay { position: fixed; inset: 0; z-index: 10002; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; padding: 20px; touch-action: auto; }
+  .search-panel { background: #fff; border-radius: 12px; width: 100%; max-width: 440px; max-height: 86vh; display: flex; flex-direction: column; overflow: hidden; touch-action: pan-y; }
+  .search-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid #e0e8e2; flex-shrink: 0; }
+  .search-title { font-size: 17px; font-weight: 800; color: #1a1a1a; }
+  .search-close { border: none; background: none; font-size: 24px; line-height: 1; color: #666; cursor: pointer; padding: 4px 8px; }
+  .search-tabs { display: flex; border-bottom: 1px solid #e0e8e2; flex-shrink: 0; }
+  .search-tab { flex: 1; border: none; background: none; padding: 11px 8px; font-size: 13px; font-weight: 700; color: #666; cursor: pointer; border-bottom: 3px solid transparent; }
+  .search-tab.active { color: #117e09; border-bottom-color: #117e09; }
+  .search-body { padding: 14px 16px; overflow-y: auto; touch-action: pan-y; }
+  .search-input { width: 100%; padding: 9px 10px; font-size: 15px; border: 1px solid #cfd8d2; border-radius: 6px; margin-bottom: 12px; font-family: inherit; }
+  .search-results { display: flex; flex-direction: column; gap: 10px; }
+  .search-empty { font-size: 13px; color: #888; text-align: center; padding: 14px 0; }
+  .search-result-card { background: #f5f7f5; border-radius: 8px; padding: 10px 12px; }
+  .search-result-role { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #117e09; margin-bottom: 3px; }
+  .search-result-name { font-size: 16px; font-weight: 800; color: #1a1a1a; }
+  .search-result-meta { font-size: 12px; color: #555; margin-top: 3px; }
+  .search-farm-item { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; background: #f5f7f5; border-radius: 6px; font-size: 13px; }
+  .search-farm-item .role { font-size: 10px; font-weight: 700; color: #117e09; }
   /* ---- Vista mobile (telefono): bacheca snella. Scatta SOLO su schermi stretti, quindi il
      totem (ampio, alta risoluzione) non è toccato. Mostra l'essenziale — farmacia di turno +
      contatti + prossimi turni/sabato — e nasconde la colonna destra (servizi/orari/mappa/QR).
@@ -189,6 +221,12 @@
     .left { display: block; overflow: visible; }
     .right { display: none; }
     .footer { flex-wrap: wrap; row-gap: 2px; }
+    /* Il footer qui è nel flusso della pagina (non fisso): a fondo pagina il pulsante di
+       ricerca, sempre fisso in basso a destra, lo coprirebbe. Lo si alza per lasciarlo libero.
+       Su schermo stretto torna icona sola (niente etichetta): il pill da totem occuperebbe
+       troppo spazio ed è comunque già sotto gli occhi sul telefono, tenuto in mano. */
+    .search-fab { bottom: 34px; padding: 0; width: 54px; height: 54px; gap: 0; font-size: 22px; }
+    .search-fab .search-fab-label { display: none; }
   }
 </style>
 <link rel="manifest" href="manifest.json">
@@ -348,6 +386,30 @@
      tap/click per chiuderlo in anticipo. -->
 <div class="spot-overlay" id="spotOverlay" onclick="chiudiSpotManuale()"></div>
 <div class="toast" id="toast"></div>
+
+<!-- Ricerca turni: pulsante flottante + pannello con due schede (per data / per farmacia).
+     Vedi apriRicerca/chiudiRicerca/setSearchTab/cercaPerData/cercaPerFarmacia nello script. -->
+<button type="button" class="search-fab" id="searchFab" onclick="apriRicerca()" title="Cerca turno" aria-label="Cerca turno"><span class="search-fab-icon">🔍</span><span class="search-fab-label">Cerca turno</span></button>
+<div class="search-overlay" id="searchOverlay" style="display:none" onclick="if(event.target===this) chiudiRicerca()">
+  <div class="search-panel">
+    <div class="search-head">
+      <div class="search-title">Cerca turno</div>
+      <button type="button" class="search-close" onclick="chiudiRicerca()" aria-label="Chiudi">×</button>
+    </div>
+    <div class="search-tabs">
+      <button type="button" class="search-tab active" id="searchTabData" onclick="setSearchTab('data')">Per data</button>
+      <button type="button" class="search-tab" id="searchTabFarm" onclick="setSearchTab('farmacia')">Per farmacia</button>
+    </div>
+    <div class="search-body" id="searchBodyData">
+      <input type="date" id="searchDateInput" class="search-input" onchange="cercaPerData()">
+      <div class="search-results" id="searchResultsData"></div>
+    </div>
+    <div class="search-body" id="searchBodyFarm" style="display:none">
+      <select id="searchFarmSelect" class="search-input" onchange="cercaPerFarmacia()"></select>
+      <div class="search-results" id="searchResultsFarm"></div>
+    </div>
+  </div>
+</div>
 
 <script>
 // --- Kiosk: blocca ogni zoom della PAGINA (non della mappa Leaflet, che usa i suoi handler) ---
@@ -1129,6 +1191,118 @@ function renderNext() {
     }
     d.setDate(d.getDate() + 1);
   }
+}
+
+// --- Ricerca turni: pannello con due schede, "per data" (turno di un giorno qualsiasi tra
+// quelli caricati) e "per farmacia" (prossimi turni futuri di una farmacia scelta). Sempre
+// disponibile (kiosk e mobile, vedi .search-fab), sopra allo spot pubblicitario che viene
+// messo in pausa finché il pannello resta aperto. ---
+let searchFarmPopolato = false;
+
+function apriRicerca() {
+  document.getElementById('searchOverlay').style.display = '';
+  clearTimeout(spotTimer);
+  nascondiSpot(); // nasconde un eventuale spot già in mostra, così non resta "incollato" sotto il pannello
+  if (!searchFarmPopolato) popolaSelectFarmacie();
+  const chiavi = Object.keys(TURNI_BASE).sort();
+  const input = document.getElementById('searchDateInput');
+  if (chiavi.length) { input.min = chiavi[0]; input.max = chiavi[chiavi.length - 1]; }
+  if (!input.value) input.value = toKey(new Date());
+  cercaPerData();
+}
+function chiudiRicerca() {
+  document.getElementById('searchOverlay').style.display = 'none';
+  pianificaSpot(); // riprende la programmazione dello spot
+}
+function setSearchTab(tab) {
+  const isData = tab === 'data';
+  document.getElementById('searchTabData').classList.toggle('active', isData);
+  document.getElementById('searchTabFarm').classList.toggle('active', !isData);
+  document.getElementById('searchBodyData').style.display = isData ? '' : 'none';
+  document.getElementById('searchBodyFarm').style.display = isData ? 'none' : '';
+}
+
+// Elenco delle farmacie che compaiono nei turni caricati (turno 24h + conturno; i turni
+// composti tipo "Di Marola/Maimone" vengono scomposti), ordinato alfabeticamente. Popola
+// la <select> della scheda "per farmacia".
+function elencoFarmacieTurni() {
+  const set = new Set();
+  Object.values(TURNI_BASE).forEach(g => {
+    if (g && g.t) g.t.split('/').forEach(n => set.add(n.trim()));
+    if (g && g.c) g.c.split('/').forEach(n => set.add(n.trim()));
+  });
+  return [...set].sort((a, b) => a.localeCompare(b, 'it'));
+}
+function popolaSelectFarmacie() {
+  const sel = document.getElementById('searchFarmSelect');
+  sel.innerHTML = '<option value="" disabled selected>— Scegli una farmacia —</option>';
+  elencoFarmacieTurni().forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = n; opt.textContent = n;
+    sel.appendChild(opt);
+  });
+  searchFarmPopolato = true;
+}
+
+// Scheda risultato della ricerca "per data": stesso spirito di buildFarmCard, ma senza lo
+// stato "aperto ora" (qui si guarda una data qualsiasi, non necessariamente oggi).
+function buildSearchCard(ruolo, nome, meta) {
+  const card = document.createElement('div');
+  card.className = 'search-result-card';
+  const role = document.createElement('div'); role.className = 'search-result-role'; role.textContent = ruolo;
+  const name = document.createElement('div'); name.className = 'search-result-name'; name.textContent = 'Farm. ' + nome;
+  card.appendChild(role); card.appendChild(name);
+  const contact = document.createElement('div'); contact.className = 'search-result-meta';
+  renderContactInto(contact, nome);
+  card.appendChild(contact);
+  if (meta) { const m = document.createElement('div'); m.className = 'search-result-meta'; m.textContent = meta; card.appendChild(m); }
+  return card;
+}
+
+function cercaPerData() {
+  const key = document.getElementById('searchDateInput').value;
+  const list = document.getElementById('searchResultsData');
+  list.innerHTML = '';
+  if (!key) return;
+  const turno = getTurnoGiorno(key);
+  if (!turno || !turno.t) {
+    list.innerHTML = '<div class="search-empty">Nessun dato per questa data.</div>';
+    return;
+  }
+  const dataTxt = fmtDate(new Date(key + 'T00:00:00'));
+  const bits = [dataTxt];
+  if (turno.straord) bits.push('★ ' + turno.straord);
+  if (turno.nota) bits.push('📌 ' + turno.nota);
+  if (turno.modificato) bits.push('✎ modificato');
+  list.appendChild(buildSearchCard('Turno 24h', turno.t, bits.join(' · ')));
+  if (turno.c) list.appendChild(buildSearchCard('Conturno', turno.c, dataTxt + ' · fino alle ' + statoConturno(key).fine));
+}
+
+// Prossimi turni futuri (da oggi in poi, farmacia scelta come turno 24h o conturno).
+function cercaPerFarmacia() {
+  const nome = document.getElementById('searchFarmSelect').value;
+  const list = document.getElementById('searchResultsFarm');
+  list.innerHTML = '';
+  if (!nome) return;
+  const oggi = getTurnoAttivo().key; // include il turno di oggi anche se siamo prima delle 08:30
+  const chiavi = Object.keys(TURNI_BASE).filter(k => k >= oggi).sort();
+  let trovati = 0;
+  chiavi.forEach(key => {
+    const turno = getTurnoGiorno(key);
+    if (!turno) return;
+    const isTurno = turno.t && turno.t.split('/').map(s => s.trim()).includes(nome);
+    const isCont = !isTurno && turno.c && turno.c.split('/').map(s => s.trim()).includes(nome);
+    if (!isTurno && !isCont) return;
+    trovati++;
+    const d = new Date(key + 'T00:00:00');
+    const item = document.createElement('div');
+    item.className = 'search-farm-item';
+    const giorno = d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+    const ruolo = isTurno ? 'Turno 24h' : 'Conturno';
+    item.innerHTML = `<span>${giorno}</span><span class="role">${ruolo}</span>`;
+    list.appendChild(item);
+  });
+  if (!trovati) list.innerHTML = '<div class="search-empty">Nessun turno futuro trovato per questa farmacia.</div>';
 }
 
 // Mappa Leaflet con i marker delle farmacie aperte (turno + conturno se aperto)
