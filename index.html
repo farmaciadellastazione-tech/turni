@@ -174,8 +174,17 @@
   /* Ricerca turni: pulsante flottante sempre visibile (kiosk e mobile) che apre un pannello
      con due ricerche - "per data" (turno di un giorno qualsiasi) e "per farmacia" (prossimi
      turni di una farmacia scelta). Sopra a tutto, anche allo spot pubblicitario (che viene
-     messo in pausa mentre il pannello è aperto, vedi apriRicerca/chiudiRicerca). */
-  .search-fab { position: fixed; right: 18px; bottom: 18px; width: 54px; height: 54px; border-radius: 50%; background: #117e09; color: #fff; border: none; font-size: 22px; box-shadow: 0 3px 10px rgba(0,0,0,.3); cursor: pointer; z-index: 10001; touch-action: manipulation; }
+     messo in pausa mentre il pannello è aperto, vedi apriRicerca/chiudiRicerca).
+     Sul totem (schermo grande, nessuno lo sta cercando) è un pill con etichetta e un lieve
+     "respiro" per farsi notare; su mobile torna un'icona sola per non rubare spazio. */
+  .search-fab { position: fixed; right: 22px; bottom: 22px; display: flex; align-items: center; gap: 10px; padding: 14px 24px 14px 18px; border-radius: 999px; background: #117e09; color: #fff; border: none; font-family: inherit; font-size: 17px; font-weight: 700; box-shadow: 0 4px 16px rgba(0,0,0,.35); cursor: pointer; z-index: 10001; touch-action: manipulation; animation: search-fab-respiro 3s ease-out infinite; }
+  .search-fab .search-fab-icon { font-size: 24px; }
+  @keyframes search-fab-respiro {
+    0% { box-shadow: 0 4px 16px rgba(0,0,0,.35), 0 0 0 0 rgba(17,126,9,.55); }
+    70% { box-shadow: 0 4px 16px rgba(0,0,0,.35), 0 0 0 16px rgba(17,126,9,0); }
+    100% { box-shadow: 0 4px 16px rgba(0,0,0,.35), 0 0 0 0 rgba(17,126,9,0); }
+  }
+  @media (prefers-reduced-motion: reduce) { .search-fab { animation: none; } }
   .search-overlay { position: fixed; inset: 0; z-index: 10002; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; padding: 20px; touch-action: auto; }
   .search-panel { background: #fff; border-radius: 12px; width: 100%; max-width: 440px; max-height: 86vh; display: flex; flex-direction: column; overflow: hidden; touch-action: pan-y; }
   .search-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid #e0e8e2; flex-shrink: 0; }
@@ -213,8 +222,11 @@
     .right { display: none; }
     .footer { flex-wrap: wrap; row-gap: 2px; }
     /* Il footer qui è nel flusso della pagina (non fisso): a fondo pagina il pulsante di
-       ricerca, sempre fisso in basso a destra, lo coprirebbe. Lo si alza per lasciarlo libero. */
-    .search-fab { bottom: 34px; }
+       ricerca, sempre fisso in basso a destra, lo coprirebbe. Lo si alza per lasciarlo libero.
+       Su schermo stretto torna icona sola (niente etichetta): il pill da totem occuperebbe
+       troppo spazio ed è comunque già sotto gli occhi sul telefono, tenuto in mano. */
+    .search-fab { bottom: 34px; padding: 0; width: 54px; height: 54px; gap: 0; font-size: 22px; }
+    .search-fab .search-fab-label { display: none; }
   }
 </style>
 <link rel="manifest" href="manifest.json">
@@ -377,7 +389,7 @@
 
 <!-- Ricerca turni: pulsante flottante + pannello con due schede (per data / per farmacia).
      Vedi apriRicerca/chiudiRicerca/setSearchTab/cercaPerData/cercaPerFarmacia nello script. -->
-<button type="button" class="search-fab" id="searchFab" onclick="apriRicerca()" title="Cerca turno" aria-label="Cerca turno">🔍</button>
+<button type="button" class="search-fab" id="searchFab" onclick="apriRicerca()" title="Cerca turno" aria-label="Cerca turno"><span class="search-fab-icon">🔍</span><span class="search-fab-label">Cerca turno</span></button>
 <div class="search-overlay" id="searchOverlay" style="display:none" onclick="if(event.target===this) chiudiRicerca()">
   <div class="search-panel">
     <div class="search-head">
