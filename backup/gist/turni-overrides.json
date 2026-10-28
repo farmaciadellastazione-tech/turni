@@ -380,6 +380,50 @@
     },
     "2026-10-30": {
       "t": "Centrale"
+    },
+    "2026-10-31": {
+      "t": "Croce Bianca"
+    },
+    "2026-11-01": {
+      "t": "Farmaceutica",
+      "c": "Di Marola/Maimone"
+    },
+    "2026-11-02": {
+      "t": "Degli Speziali"
+    },
+    "2026-11-03": {
+      "t": "Dell'Arsenale"
+    },
+    "2026-11-04": {
+      "t": "Della Marina"
+    },
+    "2026-11-05": {
+      "t": "Croce Rossa"
+    },
+    "2026-11-06": {
+      "t": "Schiaffino"
+    },
+    "2026-11-07": {
+      "t": "Beretta"
+    },
+    "2026-11-08": {
+      "t": "Di Prima",
+      "c": "Dell'Aquila"
+    },
+    "2026-11-09": {
+      "t": "Maglio"
+    },
+    "2026-11-10": {
+      "t": "Bonaschi"
+    },
+    "2026-11-11": {
+      "t": "Internazionale"
+    },
+    "2026-11-12": {
+      "t": "Alleanza"
+    },
+    "2026-11-13": {
+      "t": "Tapparo"
     }
   }
 }
