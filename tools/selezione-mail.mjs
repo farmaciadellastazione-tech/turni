@@ -44,3 +44,26 @@ export function sembraPdf(buf) {
   return !!buf && buf.length >= 4 &&
     buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46; // %PDF
 }
+
+// Calendario turni ANNUALE (bozza a settembre, ufficiale/ordinanza a gennaio):
+// non si importa da solo (arriva in Word, una volta l'anno, e va controllato),
+// ma l'automazione avvisa il titolare quando arriva. Si riconosce dall'allegato
+// "all. 2 - CALENDARIO TURNI [SP] ANNO <anno>" — stabile da anni — e non dal
+// semplice "calendario 2027.pdf" dei solleciti estivi (che non è il calendario).
+// Solo anni >= anno corrente: il definitivo può arrivare ad anno già iniziato.
+// Ritorna { anno, tipo: 'bozza'|'ufficiale'|'non specificato', allegato } o null.
+export function calendarioAnnuale(oggetto, nomiAllegati, annoCorrente) {
+  for (const nome of nomiAllegati || []) {
+    // Niente \b: "_" è un carattere di parola e "CALENDARIO_TURNI_SP_ANNO_2027" non matcherebbe.
+    const m = /CALENDARIO[\s_-]*TURNI(?![A-Z]).*?(?<!\d)(20\d\d)(?!\d)/i.exec(nome || '');
+    if (!m || !/\.(docx?|pdf|xlsx?)$/i.test(nome)) continue;
+    const anno = parseInt(m[1], 10);
+    if (anno < annoCorrente) continue;
+    const ogg = oggetto || '';
+    const tipo = /\bbozza\b/i.test(ogg) ? 'bozza'
+      : /ufficial|ordinanza|definitiv/i.test(ogg) ? 'ufficiale'
+      : 'non specificato';
+    return { anno, tipo, allegato: nome };
+  }
+  return null;
+}

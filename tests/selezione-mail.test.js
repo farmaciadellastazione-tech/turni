@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 // serve al workflow di automazione per distinguere la mail dei turni
 // dalle circolari quotidiane (ritiri lotti, DPC, avvisi ASL…), che sono
 // anch'esse piene di PDF e .docx e arrivano quasi ogni giorno.
-import { allegatiBollettino, allegatiSabato, sembraDocx, sembraPdf } from '../tools/selezione-mail.mjs';
+import { allegatiBollettino, allegatiSabato, sembraDocx, sembraPdf, calendarioAnnuale } from '../tools/selezione-mail.mjs';
 
 // Allegati reali della mail "TURNI COMUNE DELLA SPEZIA DAL 10 LUGLIO 2026 AL 24 LUGLIO 2026"
 const MAIL_TURNI = {
@@ -107,5 +107,83 @@ describe('sembraDocx — riconosce i .docx (zip OOXML) illeggibili come windows-
   it('buffer vuoto o troppo corto non è un docx', () => {
     expect(sembraDocx(Buffer.alloc(0))).toBe(false);
     expect(sembraDocx(Buffer.from([0x50]))).toBe(false);
+  });
+});
+
+// Mail reali di Federfarma col calendario turni annuale (bozza a settembre,
+// ufficiale a gennaio) e mail che NON devono far scattare l'avviso.
+describe('calendarioAnnuale — riconosce la mail del calendario turni annuale', () => {
+  const BOZZA_2027 = {
+    oggetto: 'prot. n. 2025--bozza turni, orari, ferie e aperture straordinarie anno 2027',
+    allegati: [
+      'image001.png',
+      'prot. n. 2025--bozza turni, orari, ferie e aperture straordinarie anno 2027.pdf',
+      'a-bozza delibera turni anno 2027.doc',
+      'all. 1 - orari-ferie-aperture straordinarie 2027 - comune della Spezia.xls',
+      'all. 2 - CALENDARIO TURNI ANNO 2027.doc',
+      'all. 3-aperture sabato pomeriggio 2027.xls',
+    ],
+  };
+  const UFFICIALE_2025 = {
+    oggetto: 'Ordinanza Turni farmacie Comune della Spezia anno 2025',
+    allegati: [
+      'ord_00192_31-12-2024.pdf',
+      'all. 1-orari-ferie-aperture straordinarie 2025 - comune della Spezia.pdf',
+      'all. 2- CALENDARIO TURNI SP ANNO 2025.pdf',
+      'all. 3-aperture sabato pomeriggio 2025.pdf',
+    ],
+  };
+
+  it('bozza 2027 (24/09/2026): anno, tipo "bozza" e allegato giusto', () => {
+    expect(calendarioAnnuale(BOZZA_2027.oggetto, BOZZA_2027.allegati, 2026)).toEqual({
+      anno: 2027, tipo: 'bozza', allegato: 'all. 2 - CALENDARIO TURNI ANNO 2027.doc',
+    });
+  });
+
+  it('ordinanza ufficiale 2025 (31/12/2024): tipo "ufficiale"', () => {
+    expect(calendarioAnnuale(UFFICIALE_2025.oggetto, UFFICIALE_2025.allegati, 2024)).toEqual({
+      anno: 2025, tipo: 'ufficiale', allegato: 'all. 2- CALENDARIO TURNI SP ANNO 2025.pdf',
+    });
+  });
+
+  it('"Turni 2026 farmacie Comune della Spezia - ufficiali" -> tipo "ufficiale"', () => {
+    const r = calendarioAnnuale('Turni 2026 farmacie Comune della Spezia - ufficiali',
+      ['all. 2- CALENDARIO TURNI SP ANNO 2026.pdf'], 2026);
+    expect(r).toMatchObject({ anno: 2026, tipo: 'ufficiale' });
+  });
+
+  it('il definitivo che arriva ad anno in corso conta ancora (anno == anno corrente)', () => {
+    expect(calendarioAnnuale(UFFICIALE_2025.oggetto, UFFICIALE_2025.allegati, 2025)).toMatchObject({ anno: 2025 });
+  });
+
+  it('un calendario di un anno già passato non fa scattare l\'avviso', () => {
+    expect(calendarioAnnuale(UFFICIALE_2025.oggetto, UFFICIALE_2025.allegati, 2026)).toBeNull();
+  });
+
+  it('sollecito di agosto: "calendario 2027.pdf" non è il calendario TURNI', () => {
+    expect(calendarioAnnuale('SOLLECITO RISPOSTA   TURNI 2027 COMUNE DELLA SPEZIA',
+      ['TURNI 2027 COMUNE DELLA SPEZIA.doc', 'all. 1  RIEPILOGO  2027.doc', 'calendario 2027.pdf'], 2026)).toBeNull();
+  });
+
+  it('circolare "NUOVO CALENDARIO SUPERFESTIVI" (28/07/2026) non è il calendario turni', () => {
+    expect(calendarioAnnuale('prot. n. 194 del 28.07.26 - NUOVO CALENDARIO SUPERFESTIVI FARMACIE SP A PARTIRE DAL 2027', [
+      'prot. n. 194 del 28.07.26 - NUOVO CALENDARIO SUPERFESTIVI FARMACIE SP A PARTIRE DAL 2027.pdf',
+      'prot. n. 194 del 28.07.26 - all. 1 -NUOVO schema rotazione superfestivi a 14 fino al 2035.pdf',
+    ], 2026)).toBeNull();
+  });
+
+  it('bollettino settimanale e circolari -> null', () => {
+    expect(calendarioAnnuale(MAIL_TURNI.oggetto, MAIL_TURNI.allegati, 2026)).toBeNull();
+    expect(calendarioAnnuale(MAIL_CIRCOLARE.oggetto, MAIL_CIRCOLARE.allegati, 2026)).toBeNull();
+  });
+
+  it('nomi file con underscore al posto degli spazi (es. CALENDARIO_TURNI_SP_ANNO_2027.docx)', () => {
+    expect(calendarioAnnuale('bozza turni 2027', ['CALENDARIO_TURNI_SP_ANNO_2027.docx'], 2026))
+      .toMatchObject({ anno: 2027, tipo: 'bozza' });
+  });
+
+  it('tipo "non specificato" se l\'oggetto non dice bozza/ufficiale', () => {
+    expect(calendarioAnnuale('Turni farmacie', ['CALENDARIO TURNI ANNO 2028.pdf'], 2027))
+      .toEqual({ anno: 2028, tipo: 'non specificato', allegato: 'CALENDARIO TURNI ANNO 2028.pdf' });
   });
 });

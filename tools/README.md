@@ -43,6 +43,12 @@ il 24/09/2026 (allegato 2 del prot. n. 2025). Quando arriva la versione definiti
 rigenerarlo dal nuovo file (e aggiornare `sorgente-turni-2027.txt`); le correzioni urgenti
 ad anno in corso restano negli override del Gist.
 
+**Avviso automatico**: il workflow giornaliero (`controlla-calendario-annuale.mjs`) si
+accorge della mail Federfarma col calendario annuale (allegato "CALENDARIO TURNI … ANNO
+<anno>", bozza o ufficiale) e manda una mail di avviso alla casella della farmacia; poi
+mette alla mail di Federfarma l'etichetta Gmail **"Calendario turni annuale"** così non
+avvisa due volte. L'import resta manuale (procedura sopra).
+
 **Base sul Gist**: se sul Gist esiste `turni-base.json`, le pagine la **uniscono** alla base
 del repo (`TurniParser.unisciBase`: vince il Gist giorno per giorno). Un anno nuovo
 committato nel repo è quindi visibile anche se il Gist contiene solo l'anno precedente.
