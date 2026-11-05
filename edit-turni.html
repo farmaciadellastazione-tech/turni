@@ -362,7 +362,9 @@ async function loadFromGist() {
     const bf = data.files['turni-base.json'];
     if (bf && bf.content) {
       const b = JSON.parse(bf.content);
-      if (b && Object.keys(b).length) TURNI_BASE = b;
+      // Il Gist vince giorno per giorno ma si unisce alla base del repo:
+      // un anno presente solo nel repo (es. il nuovo anno) non viene perso.
+      if (b && Object.keys(b).length) TURNI_BASE = Object.assign({}, TURNI_BASE, b);
     }
     overrides = JSON.parse(data.files[GIST_FILE].content).overrides || {};
     const pf = data.files[POS_FILE];

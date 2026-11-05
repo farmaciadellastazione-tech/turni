@@ -435,6 +435,7 @@ const GIST_FILE = 'turni-overrides.json';
 const GIST_RAW = `https://gist.githubusercontent.com/${GIST_OWNER}/${GIST_ID}/raw`;
 
 let TURNI_BASE = {};
+let BASE_REPO = {};   // base letta da data/turni-<anno>.json (prima dell'unione col Gist)
 let FARMACIE = {};
 let POSIZIONI = {};            // nome -> [lat, lng], dal Gist farmacie-pos.json
 let mappa = null, layerMarker = null;
@@ -707,7 +708,8 @@ async function loadBase() {
   const parts = await Promise.all([yr, yr + 1].map(y =>
     fetch(`data/turni-${y}.json`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
   ));
-  TURNI_BASE = Object.assign({}, ...parts);
+  BASE_REPO = Object.assign({}, ...parts);
+  TURNI_BASE = BASE_REPO;
 }
 
 async function loadFarmacie() {
@@ -749,8 +751,10 @@ async function loadOverrides() {
       fetchGistRaw('farmacie.json'),
       fetchGistRaw('sabato.json'),
     ]);
-    // Base dal Gist (se presente): ha la precedenza sul seed locale del repo
-    if (baseTxt) { try { const b = JSON.parse(baseTxt); if (b && Object.keys(b).length) TURNI_BASE = b; } catch(e) {} }
+    // Base dal Gist (se presente): ha la precedenza sul seed locale del repo giorno per giorno,
+    // ma si UNISCE ad esso: un anno presente solo nel repo (es. il nuovo anno appena
+    // committato) resta visibile anche se il Gist contiene soltanto l'anno corrente.
+    if (baseTxt) { try { const b = JSON.parse(baseTxt); if (b && Object.keys(b).length) TURNI_BASE = Object.assign({}, BASE_REPO, b); } catch(e) {} }
     overrides = ovTxt ? (JSON.parse(ovTxt).overrides || {}) : {};
     try { SABATO = sabTxt ? (JSON.parse(sabTxt) || {}) : {}; } catch(e) { SABATO = {}; }
     POSIZIONI = posTxt ? (JSON.parse(posTxt) || {}) : {};
