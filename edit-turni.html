@@ -365,6 +365,7 @@ async function loadFromGist() {
     const data = await r.json();
     const bf = data.files['turni-base.json'];
     GIST_BASE = {};
+    gistBaseLetta = false; // torna true solo se la lettura qui sotto va a buon fine
     if (bf && bf.content) {
       const b = JSON.parse(bf.content);
       if (b && typeof b === 'object') GIST_BASE = b;
