@@ -96,3 +96,17 @@ jobs:
 
       - name: Verifica che il Gist copra il periodo corrente
         run: node tools/verifica-copertura.mjs
+
+      # ── Notifica ──────────────────────────────────────────────────────────────
+      # Mail di riepilogo alla casella della farmacia, SOLO se oggi qualcosa è
+      # cambiato (bollettino / sabato applicati) o se un passo sopra è fallito.
+      # always(): deve girare anche (soprattutto) quando il giro è in errore.
+
+      - name: Manda la mail di riepilogo (solo se ci sono novità o errori)
+        if: always()
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          GIRO_FALLITO: ${{ job.status != 'success' }}
+          URL_RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node tools/notifica-aggiornamento.mjs

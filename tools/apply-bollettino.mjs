@@ -16,6 +16,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { registraEvento } from './notifica.mjs';
 
 const require = createRequire(import.meta.url);
 const { parseBulletin } = require(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'turni-parser.js'));
@@ -90,6 +91,7 @@ const existing = current.overrides || {};
 
 // 4. Merge: aggiorna t/c ma preserva fineOra, straord, nota manuali
 let changed = 0;
+const modificati = [];   // per la mail di notifica (notifica.mjs)
 const merged = { ...existing };
 for (const [data, rec] of Object.entries(turni)) {
   const ex = existing[data] || {};
@@ -105,6 +107,7 @@ for (const [data, rec] of Object.entries(turni)) {
   if (JSON.stringify(ex) !== JSON.stringify(neo)) {
     merged[data] = neo;
     changed++;
+    modificati.push({ data, t: neo.t, ...(neo.c ? { c: neo.c } : {}), prima: Object.keys(ex).length ? { t: ex.t, ...(ex.c ? { c: ex.c } : {}) } : null });
     const prima = Object.keys(ex).length ? JSON.stringify(ex) : '(nuovo)';
     console.log(`  ${data}: ${prima} → ${JSON.stringify(neo)}`);
   }
@@ -132,6 +135,7 @@ if (!resp.ok) {
   process.exit(1);
 }
 
+registraEvento({ tipo: 'bollettino', giorni: modificati });
 console.log(`✓ Gist aggiornato: ${changed} giorn${changed === 1 ? 'o modificato' : 'i modificati'}.`);
 if (errori) console.error(`ATTENZIONE: aggiornamento riuscito ma ${errori} PDF non applicat${errori === 1 ? 'o' : 'i'} (vedi sopra) — run segnato in errore per farlo notare.`);
 process.exit(errori ? 1 : 0);

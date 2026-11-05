@@ -94,3 +94,12 @@ Le fixture sono in `../data/esempio-bollettino-*.txt` (testo estratto da PDF 202
 - `../data/sorgente-turni-2027.txt` — testo della bozza 2027 (dal `.doc`, via PDF)
 - `../data/turni-2027.json` — calendario 2027 **provvisorio** (bozza)
 - `../data/farmacie.json` — anagrafica (indirizzo + telefono) di ogni farmacia
+
+## Notifica degli aggiornamenti automatici
+
+Il workflow giornaliero manda una mail di riepilogo alla casella della farmacia **solo**
+quando cambia qualcosa (bollettino o sabato pomeriggio applicati: giorni, turni, conturni,
+farmacie aperte) **o** quando un passo fallisce (con il link al giro). Nei giorni senza
+novità nessuna mail. `apply-bollettino.mjs` / `apply-sabato.mjs` registrano le modifiche in
+`.notifica-aggiornamento.json` (via `notifica.mjs`, testato), l'ultimo passo
+`notifica-aggiornamento.mjs` compone e invia la mail con la stessa App Password Gmail.
