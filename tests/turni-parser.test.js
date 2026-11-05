@@ -37,6 +37,32 @@ describe('parseAnnualText — calendario annuale dal PDF ufficiale 2026', () => 
   });
 });
 
+// Bozza 2027 (versione provvisoria, Federfarma 24/09/2026): arriva come .doc Word,
+// convertito in PDF con LibreOffice e poi estratto con pdf-parse come il 2026.
+describe('parseAnnualText — bozza calendario 2027 (dal .doc ufficiale)', () => {
+  const { turni, problemi } = parseAnnualText(leggi('sorgente-turni-2027.txt'), 2027);
+
+  it('riconosce tutti i 365 giorni senza problemi', () => {
+    expect(problemi).toEqual([]);
+    expect(Object.keys(turni)).toHaveLength(365);
+  });
+
+  it('"SANTA BARBARA" scritto per esteso -> "S.ta Barbara"', () => {
+    expect(turni['2027-01-28']).toEqual({ t: 'S.ta Barbara' });
+    expect(turni['2027-06-13']).toEqual({ t: 'S.ta Barbara', c: 'Argentieri' });
+  });
+
+  it('ignora i rimandi alle note (², ²bis) accanto al giorno', () => {
+    expect(turni['2027-03-19']).toEqual({ t: 'Croce Bianca', c: 'Bergero' });
+    expect(turni['2027-03-21']).toEqual({ t: 'Farmaceutica', c: 'Beretta' });
+  });
+
+  it('rigenerato dal sorgente == base committata data/turni-2027.json', () => {
+    const base = JSON.parse(leggi('turni-2027.json'));
+    expect(turni).toEqual(base);
+  });
+});
+
 describe('parseBulletin — bollettini settimanali reali (fixture estratte da PDF)', () => {
   const CASI = [
     {

@@ -31,6 +31,22 @@ npm install
 
 In alternativa al PDF si può passare un file di testo già estratto (`.txt`): l'uso è identico.
 
+**Se il calendario arriva in Word (`.doc`)** — come la bozza 2027 — convertilo prima in PDF
+con LibreOffice e poi procedi come sopra:
+
+```bash
+"C:/Program Files/LibreOffice/program/soffice.exe" --headless --convert-to pdf "CALENDARIO TURNI ANNO 2027.doc"
+```
+
+**Versione provvisoria**: `turni-2027.json` è generato dalla **bozza** inviata da Federfarma
+il 24/09/2026 (allegato 2 del prot. n. 2025). Quando arriva la versione definitiva basta
+rigenerarlo dal nuovo file (e aggiornare `sorgente-turni-2027.txt`); le correzioni urgenti
+ad anno in corso restano negli override del Gist.
+
+**Base sul Gist**: se sul Gist esiste `turni-base.json`, le pagine la **uniscono** alla base
+del repo (vince il Gist giorno per giorno). Un anno nuovo committato nel repo è quindi
+visibile anche se il Gist contiene solo l'anno precedente.
+
 ## Note
 
 - I nomi delle farmacie vengono **normalizzati** sui nomi canonici (vedi `CANON`
@@ -66,4 +82,6 @@ Le fixture sono in `../data/esempio-bollettino-*.txt` (testo estratto da PDF 202
 - `../turni-parser.js` — parser condiviso (`parseAnnualText`, `parseBulletin`, `CANON`)
 - `../data/sorgente-turni-2026.txt` — testo del PDF 2026 (sorgente storica)
 - `../data/turni-2026.json` — calendario 2026 generato e validato
+- `../data/sorgente-turni-2027.txt` — testo della bozza 2027 (dal `.doc`, via PDF)
+- `../data/turni-2027.json` — calendario 2027 **provvisorio** (bozza)
 - `../data/farmacie.json` — anagrafica (indirizzo + telefono) di ogni farmacia
