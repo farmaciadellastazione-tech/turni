@@ -79,7 +79,11 @@ async function main() {
         host: 'smtp.gmail.com', port: 465, secure: true, auth: { user, pass },
       });
 
+      // Ogni mail è indipendente: un errore su una (parsing, invio, etichetta) non deve
+      // bloccare le altre a ogni run. Gli errori si contano e fanno uscire con 1 alla fine.
+      let errori = 0;
       for (const uid of [...uids].sort((a, b) => a - b)) {
+       try {
         const msg = await client.fetchOne(String(uid), { source: true, threadId: true }, { uid: true });
         const parsed = await simpleParser(msg.source);
         const nomi = (parsed.attachments || []).map(a => a.filename || '');
@@ -99,8 +103,12 @@ async function main() {
         });
         await client.messageFlagsAdd(String(uid), [ETICHETTA], { uid: true, useLabels: true });
         console.log(`  Avviso inviato, etichetta "${ETICHETTA}" applicata.`);
+       } catch (err) {
+        errori++;
+        console.error(`Errore sulla mail uid ${uid} (riprovo al prossimo run):`, err?.message || err);
+       }
       }
-      return 0;
+      return errori ? 1 : 0;
     } finally {
       lock.release();
     }

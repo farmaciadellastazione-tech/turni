@@ -54,7 +54,8 @@ export function sembraPdf(buf) {
 // Ritorna { anno, tipo: 'bozza'|'ufficiale'|'non specificato', allegato } o null.
 export function calendarioAnnuale(oggetto, nomiAllegati, annoCorrente) {
   for (const nome of nomiAllegati || []) {
-    const m = /CALENDARIO[\s_-]*TURNI\b.*?\b(20\d\d)\b/i.exec(nome || '');
+    // Niente \b: "_" è un carattere di parola e "CALENDARIO_TURNI_SP_ANNO_2027" non matcherebbe.
+    const m = /CALENDARIO[\s_-]*TURNI(?![A-Z]).*?(?<!\d)(20\d\d)(?!\d)/i.exec(nome || '');
     if (!m || !/\.(docx?|pdf|xlsx?)$/i.test(nome)) continue;
     const anno = parseInt(m[1], 10);
     if (anno < annoCorrente) continue;

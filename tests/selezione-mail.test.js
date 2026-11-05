@@ -177,6 +177,11 @@ describe('calendarioAnnuale — riconosce la mail del calendario turni annuale',
     expect(calendarioAnnuale(MAIL_CIRCOLARE.oggetto, MAIL_CIRCOLARE.allegati, 2026)).toBeNull();
   });
 
+  it('nomi file con underscore al posto degli spazi (es. CALENDARIO_TURNI_SP_ANNO_2027.docx)', () => {
+    expect(calendarioAnnuale('bozza turni 2027', ['CALENDARIO_TURNI_SP_ANNO_2027.docx'], 2026))
+      .toMatchObject({ anno: 2027, tipo: 'bozza' });
+  });
+
   it('tipo "non specificato" se l\'oggetto non dice bozza/ufficiale', () => {
     expect(calendarioAnnuale('Turni farmacie', ['CALENDARIO TURNI ANNO 2028.pdf'], 2027))
       .toEqual({ anno: 2028, tipo: 'non specificato', allegato: 'CALENDARIO TURNI ANNO 2028.pdf' });
