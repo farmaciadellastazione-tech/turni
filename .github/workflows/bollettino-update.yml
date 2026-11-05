@@ -75,6 +75,19 @@ jobs:
           GIST_PAT: ${{ secrets.GIST_PAT }}
         run: node tools/apply-sabato.mjs .sabato-*.doc
 
+      # ── Calendario turni annuale (bozza/ufficiale) ───────────────────────────
+      # Non si importa da solo: manda solo una mail di avviso al titolare
+      # (una volta per mail, grazie all'etichetta Gmail "Calendario turni annuale").
+      # continue-on-error: un problema qui non deve far diventare rosso il run
+      # dei bollettini (resta visibile come avviso nel riepilogo del run).
+
+      - name: Avvisa se è arrivato il calendario turni annuale
+        continue-on-error: true
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: node tools/controlla-calendario-annuale.mjs
+
       # ── Rete di sicurezza ─────────────────────────────────────────────────────
       # Anche se i passi sopra sono verdi ("nessuna mail trovata" è un esito
       # legittimo), i dati sul Gist devono coprire il periodo corrente: se una
