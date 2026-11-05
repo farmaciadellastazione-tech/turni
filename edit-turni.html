@@ -305,7 +305,17 @@ const FARMACIE = [
 let TURNI_BASE = {};   // base effettiva = repo + Gist (vedi TurniParser.unisciBase)
 let BASE_REPO = {};    // data/turni-<anno>.json del repo
 let GIST_BASE = {};    // turni-base.json del Gist così com'è: l'import annuale scrive solo questo
-let gistBaseLetta = false; // true solo dopo una lettura riuscita del Gist (protegge l'import annuale)
+// true solo dopo una lettura COMPLETA e riuscita del Gist. Tutti i salvataggi sul Gist lo
+// richiedono: con la lettura fallita i dati in memoria sono vuoti e salvare cancellerebbe
+// quelli pubblicati (successo davvero il 05/11/2026: 135 override azzerati da un Salva).
+let gistCaricato = false;
+const MSG_GIST_NON_CARICATO = 'I dati del Gist non sono stati caricati (token non valido o rete assente): ricarica la pagina (F5) prima di salvare. Nulla è stato salvato.';
+function gistPronto(usaAlert) {
+  if (gistCaricato) return true;
+  if (usaAlert) alert(MSG_GIST_NON_CARICATO);
+  setStatus('⚠ ' + MSG_GIST_NON_CARICATO, true);
+  return false;
+}
 
 const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const GIORNI_IT = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
@@ -355,6 +365,7 @@ async function loadFarmacie() {
 }
 
 async function loadFromGist() {
+  gistCaricato = false;
   setStatus('Caricamento dal Gist...', false);
   try {
     const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
@@ -365,7 +376,6 @@ async function loadFromGist() {
     const data = await r.json();
     const bf = data.files['turni-base.json'];
     GIST_BASE = {};
-    gistBaseLetta = false; // torna true solo se la lettura qui sotto va a buon fine
     if (bf && bf.content) {
       const b = JSON.parse(bf.content);
       if (b && typeof b === 'object') GIST_BASE = b;
@@ -373,7 +383,6 @@ async function loadFromGist() {
     // Il Gist vince giorno per giorno ma si unisce alla base del repo:
     // un anno presente solo nel repo (es. il nuovo anno) non viene perso.
     TURNI_BASE = TurniParser.unisciBase(BASE_REPO, GIST_BASE);
-    gistBaseLetta = true;
     overrides = JSON.parse(data.files[GIST_FILE].content).overrides || {};
     const pf = data.files[POS_FILE];
     POSIZIONI = (pf && pf.content) ? (JSON.parse(pf.content) || {}) : {};
@@ -381,6 +390,7 @@ async function loadFromGist() {
     CONTENUTI = (cf && cf.content) ? (JSON.parse(cf.content) || {}) : {};
     const sf = data.files[SAB_FILE];
     SABATO_GIST = (sf && sf.content) ? (JSON.parse(sf.content) || {}) : {};
+    gistCaricato = true;
     const n = Object.keys(overrides).length;
     setStatus(`✓ Caricato — ${n} modific${n===1?'a':'he'} salvat${n===1?'a':'e'}`, false);
   } catch(e) {
@@ -392,6 +402,7 @@ async function loadFromGist() {
 async function saveAll() {
   const token = getToken();
   if (!token) { setStatus('⚠ Inserisci prima il GitHub Token', true); return; }
+  if (!gistPronto(false)) return;
   const btn = document.getElementById('saveAllBtn');
   btn.disabled = true; btn.textContent = '⏳';
   setStatus('Salvataggio...', false);
@@ -460,7 +471,7 @@ async function importaCalendario(file) {
     if (!token) { setStatus(`✓ PDF letto: ${anno}, ${n} giorni riconosciuti. Inserisci il GitHub Token per salvare sul Gist.`, false); return; }
     // Senza una lettura riuscita del Gist, GIST_BASE è vuoto: salvando si cancellerebbero
     // gli altri anni già pubblicati sul Gist.
-    if (!gistBaseLetta) { setStatus('⚠ Prima ricarica i dati dal Gist (lettura non riuscita): import non salvato.', true); return; }
+    if (!gistPronto(false)) return;
     if (!confirm(`Calendario ${anno}: riconosciuti ${n} giorni.\nSalvare la base sul Gist? (sostituisce la base dell'anno ${anno})`)) {
       setStatus('Import annullato.', false); return;
     }
@@ -789,6 +800,7 @@ function aggiornaPosCount() {
 async function salvaPosizioni() {
   const token = getToken();
   if (!token) { alert('Inserisci prima il GitHub Token (campo in alto nell\'editor).'); return; }
+  if (!gistPronto(true)) return;
   const btn = document.getElementById('posSaveBtn');
   btn.disabled = true; btn.textContent = '⏳';
   try {
@@ -832,6 +844,7 @@ function aggiornaServiziCount() {
 async function salvaServizi() {
   const token = getToken();
   if (!token) { alert('Inserisci prima il GitHub Token (campo in alto nell\'editor).'); return; }
+  if (!gistPronto(true)) return;
   const btn = document.getElementById('serviziSaveBtn');
   btn.disabled = true; btn.textContent = '⏳';
   try {
@@ -941,6 +954,7 @@ function aggiornaOrariCount() {
 async function salvaOrari() {
   const token = getToken();
   if (!token) { alert('Inserisci prima il GitHub Token (campo in alto nell\'editor).'); return; }
+  if (!gistPronto(true)) return;
   const btn = document.getElementById('orariSaveBtn');
   btn.disabled = true; btn.textContent = '⏳';
   try {
@@ -1063,6 +1077,7 @@ function aggiornaAnnunciCount() {
 async function salvaAnnunci() {
   const token = getToken();
   if (!token) { alert('Inserisci prima il GitHub Token (campo in alto nell\'editor).'); return; }
+  if (!gistPronto(true)) return;
   // Controllo coerenza date (Dal <= Al)
   for (const r of document.querySelectorAll('#annunciEditor .annuncio-row')) {
     const da = r.querySelector('.an-da').value, a = r.querySelector('.an-a').value;
@@ -1255,6 +1270,7 @@ function aggiornaPubbCount() {
 async function salvaPubblicita() {
   const token = getToken();
   if (!token) { alert('Inserisci prima il GitHub Token (campo in alto nell\'editor).'); return; }
+  if (!gistPronto(true)) return;
   for (const r of document.querySelectorAll('#pubbEditor .pubb-row')) {
     const da = r.querySelector('.sp-da').value, a = r.querySelector('.sp-a').value;
     if (da && a && da > a) { alert('Una slide ha "Dal" successivo ad "Al". Correggi le date.'); return; }
@@ -1321,6 +1337,7 @@ async function importaSabato(file) {
       setStatus(`✓ Documento letto: sabato ${data}, ${farmacie.length} farmacie. Inserisci il GitHub Token per salvare sul Gist.`, false);
       return;
     }
+    if (!gistPronto(true)) return;
     if (!confirm(`${riepilogo}\n\nSalvare sul Gist? (la bacheca lo mostrerà il sabato pomeriggio)`)) {
       setStatus('Import sabato annullato.', false); return;
     }
