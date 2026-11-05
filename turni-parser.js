@@ -20,7 +20,8 @@
     // La farmacia di Pegazzano è stata rinominata "Del Fico" (ex "Campodonico"):
     // entrambe le grafie (PDF annuale storico e bollettini) puntano al nome nuovo.
     'CAMPODONICO': 'Del Fico', 'DEL FICO': 'Del Fico',
-    'S.TA BARBARA': 'S.ta Barbara', 'SCHIAFFINO': 'Schiaffino',
+    // la bozza 2027 scrive il nome per esteso
+    'S.TA BARBARA': 'S.ta Barbara', 'SANTA BARBARA': 'S.ta Barbara', 'SCHIAFFINO': 'Schiaffino',
     'TARANTOLA': 'Tarantola', 'FELIA PRIONE': 'Felia Prione', 'DELLA MARINA': 'Della Marina',
     'DELLA STAZIONE': 'Della Stazione', 'BERGERO': 'Bergero', 'MIGLIARINA': 'Migliarina',
     'MAGLIO': 'Maglio', 'BARACCHINI': 'Baracchini', 'FARMACEUTICA': 'Farmaceutica',
@@ -75,7 +76,10 @@
         const giorno = parseInt(toks[w - 1], 10);
         if (!giorno) return;
         const stop = (k + 1 < wIdx.length) ? wIdx[k + 1] - 1 : toks.length;
-        const nameToks = toks.slice(w + 1, stop).filter(t => !/^[1-9]$/.test(t));
+        // Scarta le cifre singole (colonna TURNO DIURNO) e i rimandi alle note
+        // in apice accanto al giorno (es. "²", "²bis" della bozza 2027).
+        const nameToks = toks.slice(w + 1, stop)
+          .filter(t => !/^[1-9]$/.test(t) && !/^[¹²³⁰-⁹]+(bis|ter)?$/.test(t));
 
         const names = [];
         let i = 0;
@@ -261,5 +265,14 @@
     return { data, orario, farmacie, problemi };
   }
 
-  return { CANON, parseAnnualText, parseBulletin, parseSabatoPomeriggio };
+  // Unisce la base del repo (data/turni-<anno>.json) con turni-base.json del Gist:
+  // il Gist vince giorno per giorno, il repo copre tutti gli altri giorni. Così un anno
+  // committato nel repo resta visibile anche se il Gist contiene solo l'anno precedente.
+  // Non modifica gli oggetti passati.
+  function unisciBase(repo, gist) {
+    const g = (gist && typeof gist === 'object') ? gist : {};
+    return Object.assign({}, repo || {}, g);
+  }
+
+  return { CANON, parseAnnualText, parseBulletin, parseSabatoPomeriggio, unisciBase };
 });

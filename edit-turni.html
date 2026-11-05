@@ -302,7 +302,10 @@ const FARMACIE = [
   'S.ta Barbara','Schiaffino','Tapparo','Tarantola'
 ];
 
-let TURNI_BASE = {};
+let TURNI_BASE = {};   // base effettiva = repo + Gist (vedi TurniParser.unisciBase)
+let BASE_REPO = {};    // data/turni-<anno>.json del repo
+let GIST_BASE = {};    // turni-base.json del Gist così com'è: l'import annuale scrive solo questo
+let gistBaseLetta = false; // true solo dopo una lettura riuscita del Gist (protegge l'import annuale)
 
 const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
 const GIORNI_IT = ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
@@ -342,7 +345,8 @@ async function loadBase() {
   const parts = await Promise.all([yr - 1, yr, yr + 1].map(y =>
     fetch(`data/turni-${y}.json`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
   ));
-  TURNI_BASE = Object.assign({}, ...parts);
+  BASE_REPO = Object.assign({}, ...parts);
+  TURNI_BASE = BASE_REPO;
 }
 
 async function loadFarmacie() {
@@ -360,10 +364,16 @@ async function loadFromGist() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
     const bf = data.files['turni-base.json'];
+    GIST_BASE = {};
+    gistBaseLetta = false; // torna true solo se la lettura qui sotto va a buon fine
     if (bf && bf.content) {
       const b = JSON.parse(bf.content);
-      if (b && Object.keys(b).length) TURNI_BASE = b;
+      if (b && typeof b === 'object') GIST_BASE = b;
     }
+    // Il Gist vince giorno per giorno ma si unisce alla base del repo:
+    // un anno presente solo nel repo (es. il nuovo anno) non viene perso.
+    TURNI_BASE = TurniParser.unisciBase(BASE_REPO, GIST_BASE);
+    gistBaseLetta = true;
     overrides = JSON.parse(data.files[GIST_FILE].content).overrides || {};
     const pf = data.files[POS_FILE];
     POSIZIONI = (pf && pf.content) ? (JSON.parse(pf.content) || {}) : {};
@@ -448,10 +458,15 @@ async function importaCalendario(file) {
     }
     const token = getToken();
     if (!token) { setStatus(`✓ PDF letto: ${anno}, ${n} giorni riconosciuti. Inserisci il GitHub Token per salvare sul Gist.`, false); return; }
+    // Senza una lettura riuscita del Gist, GIST_BASE è vuoto: salvando si cancellerebbero
+    // gli altri anni già pubblicati sul Gist.
+    if (!gistBaseLetta) { setStatus('⚠ Prima ricarica i dati dal Gist (lettura non riuscita): import non salvato.', true); return; }
     if (!confirm(`Calendario ${anno}: riconosciuti ${n} giorni.\nSalvare la base sul Gist? (sostituisce la base dell'anno ${anno})`)) {
       setStatus('Import annullato.', false); return;
     }
-    const merged = Object.assign({}, TURNI_BASE, turni); // mantiene gli altri anni
+    // Parte dalla base già sul Gist (non da quella unita col repo): così sul Gist
+    // finisce solo l'anno importato e gli anni del repo non vengono "congelati" lì.
+    const merged = Object.assign({}, GIST_BASE, turni); // mantiene gli altri anni del Gist
     setStatus('Salvataggio base sul Gist...', false);
     const r = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
       method: 'PATCH',
@@ -459,7 +474,8 @@ async function importaCalendario(file) {
       body: JSON.stringify({ files: { 'turni-base.json': { content: JSON.stringify(merged) } } })
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    TURNI_BASE = merged;
+    GIST_BASE = merged;
+    TURNI_BASE = TurniParser.unisciBase(BASE_REPO, GIST_BASE);
     setStatus(`✓ Calendario ${anno} salvato (${n} giorni). La bacheca si aggiornerà entro 5 minuti.`, false);
     renderCal();
   } catch (e) {
