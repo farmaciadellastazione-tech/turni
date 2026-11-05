@@ -245,6 +245,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="qrcode.js"></script>
+<script src="turni-parser.js"></script>
 <!-- Analytics anonimo (GoatCounter, no cookie/dati personali): serve solo a capire se la
      bacheca viene aperta dopo lo scan del QR. Nessun backend nostro, nessuna config qui. -->
 <script data-goatcounter="https://farmaciastazione.goatcounter.com/count"
@@ -705,7 +706,8 @@ function mostraToast(msg) {
 
 async function loadBase() {
   const yr = new Date().getFullYear();
-  const parts = await Promise.all([yr, yr + 1].map(y =>
+  // Anche l'anno precedente: il 1° gennaio prima delle 08:30 il turno attivo è quello del 31/12.
+  const parts = await Promise.all([yr - 1, yr, yr + 1].map(y =>
     fetch(`data/turni-${y}.json`).then(r => r.ok ? r.json() : {}).catch(() => ({}))
   ));
   BASE_REPO = Object.assign({}, ...parts);
@@ -754,7 +756,7 @@ async function loadOverrides() {
     // Base dal Gist (se presente): ha la precedenza sul seed locale del repo giorno per giorno,
     // ma si UNISCE ad esso: un anno presente solo nel repo (es. il nuovo anno appena
     // committato) resta visibile anche se il Gist contiene soltanto l'anno corrente.
-    if (baseTxt) { try { const b = JSON.parse(baseTxt); if (b && Object.keys(b).length) TURNI_BASE = Object.assign({}, BASE_REPO, b); } catch(e) {} }
+    if (baseTxt) { try { const b = JSON.parse(baseTxt); if (b && Object.keys(b).length) TURNI_BASE = TurniParser.unisciBase(BASE_REPO, b); } catch(e) {} }
     overrides = ovTxt ? (JSON.parse(ovTxt).overrides || {}) : {};
     try { SABATO = sabTxt ? (JSON.parse(sabTxt) || {}) : {}; } catch(e) { SABATO = {}; }
     POSIZIONI = posTxt ? (JSON.parse(posTxt) || {}) : {};

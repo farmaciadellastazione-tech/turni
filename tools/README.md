@@ -44,8 +44,11 @@ rigenerarlo dal nuovo file (e aggiornare `sorgente-turni-2027.txt`); le correzio
 ad anno in corso restano negli override del Gist.
 
 **Base sul Gist**: se sul Gist esiste `turni-base.json`, le pagine la **uniscono** alla base
-del repo (vince il Gist giorno per giorno). Un anno nuovo committato nel repo è quindi
-visibile anche se il Gist contiene solo l'anno precedente.
+del repo (`TurniParser.unisciBase`: vince il Gist giorno per giorno). Un anno nuovo
+committato nel repo è quindi visibile anche se il Gist contiene solo l'anno precedente.
+L'import annuale dell'editor scrive sul Gist solo l'anno importato (mai gli anni del repo).
+Attenzione: se un anno è stato importato dall'editor, le correzioni successive di quell'anno
+vanno fatte dall'editor — rigenerarlo nel repo non basterebbe, perché il Gist vince.
 
 ## Note
 

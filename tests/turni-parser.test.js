@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 // turni-parser.js è UMD (module.exports in Node): lo carico via require, come fa
 // l'editor via <script src> e il generatore CLI via require.
 const require = createRequire(import.meta.url);
-const { CANON, parseAnnualText, parseBulletin, parseSabatoPomeriggio } = require('../turni-parser.js');
+const { CANON, parseAnnualText, parseBulletin, parseSabatoPomeriggio, unisciBase } = require('../turni-parser.js');
 
 const DATA = join(dirname(fileURLToPath(import.meta.url)), '..', 'data');
 const leggi = (f) => readFileSync(join(DATA, f), 'utf8');
@@ -34,6 +34,37 @@ describe('parseAnnualText — calendario annuale dal PDF ufficiale 2026', () => 
   it('rigenerato dal sorgente == base committata data/turni-2026.json', () => {
     const base = JSON.parse(leggi('turni-2026.json'));
     expect(turni).toEqual(base);
+  });
+});
+
+describe('unisciBase — base del repo + turni-base.json del Gist', () => {
+  const repo = {
+    '2026-12-31': { t: 'Centrale' },
+    '2027-01-01': { t: 'Degli Speziali', c: 'Argentieri' },
+  };
+
+  it('un anno presente solo nel repo resta visibile se il Gist ha solo l\'anno precedente', () => {
+    const gist = { '2026-12-31': { t: 'Maglio' } };
+    const b = unisciBase(repo, gist);
+    expect(b['2027-01-01']).toEqual({ t: 'Degli Speziali', c: 'Argentieri' });
+  });
+
+  it('il Gist vince giorno per giorno', () => {
+    const b = unisciBase(repo, { '2026-12-31': { t: 'Maglio' } });
+    expect(b['2026-12-31']).toEqual({ t: 'Maglio' });
+  });
+
+  it('Gist assente, vuoto o non valido -> resta la base del repo', () => {
+    expect(unisciBase(repo, null)).toEqual(repo);
+    expect(unisciBase(repo, {})).toEqual(repo);
+    expect(unisciBase(repo, 'x')).toEqual(repo);
+  });
+
+  it('non modifica gli oggetti di partenza', () => {
+    const gist = { '2026-12-31': { t: 'Maglio' } };
+    unisciBase(repo, gist);
+    expect(repo['2026-12-31']).toEqual({ t: 'Centrale' });
+    expect(Object.keys(gist)).toEqual(['2026-12-31']);
   });
 });
 

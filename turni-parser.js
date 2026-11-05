@@ -265,5 +265,14 @@
     return { data, orario, farmacie, problemi };
   }
 
-  return { CANON, parseAnnualText, parseBulletin, parseSabatoPomeriggio };
+  // Unisce la base del repo (data/turni-<anno>.json) con turni-base.json del Gist:
+  // il Gist vince giorno per giorno, il repo copre tutti gli altri giorni. Così un anno
+  // committato nel repo resta visibile anche se il Gist contiene solo l'anno precedente.
+  // Non modifica gli oggetti passati.
+  function unisciBase(repo, gist) {
+    const g = (gist && typeof gist === 'object') ? gist : {};
+    return Object.assign({}, repo || {}, g);
+  }
+
+  return { CANON, parseAnnualText, parseBulletin, parseSabatoPomeriggio, unisciBase };
 });
