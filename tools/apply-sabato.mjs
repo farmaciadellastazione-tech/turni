@@ -17,6 +17,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { sembraDocx, sembraPdf } from './selezione-mail.mjs';
+import { registraEvento } from './notifica.mjs';
 
 const require = createRequire(import.meta.url);
 const { parseSabatoPomeriggio } = require(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'turni-parser.js'));
@@ -150,6 +151,12 @@ if (!resp.ok) {
   process.exit(1);
 }
 
+// Per la mail di notifica: solo i sabati davvero nuovi o cambiati (non la semplice
+// rimozione dei sabati passati).
+const sabatiCambiati = Object.keys(nuovi).sort()
+  .filter(k => JSON.stringify(nuovi[k]) !== JSON.stringify(current[k]))
+  .map(k => ({ data: k, ...nuovi[k] }));
+if (sabatiCambiati.length) registraEvento({ tipo: 'sabato', sabati: sabatiCambiati });
 console.log(`✓ sabato.json aggiornato per: ${Object.keys(nuovi).join(', ')}.`);
 if (errori) console.error(`ATTENZIONE: aggiornamento riuscito ma ${errori} doc non applicat${errori === 1 ? 'o' : 'i'} (vedi sopra) — run segnato in errore per farlo notare.`);
 process.exit(errori ? 1 : 0);
