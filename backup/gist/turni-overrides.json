@@ -430,6 +430,50 @@
     },
     "2027-03-21": {
       "straord": "Argentieri 8:00–19:30 · Del Fico 9:00–13:00 · Centrale 9:00–19:30 · Croce Verde 8:30–20:00 · Farina 8:30–13:00 · Maglio 9:00–13:00"
+    },
+    "2026-11-14": {
+      "t": "Croce Verde"
+    },
+    "2026-11-15": {
+      "t": "Argentieri",
+      "c": "Centrale"
+    },
+    "2026-11-16": {
+      "t": "Baracchini"
+    },
+    "2026-11-17": {
+      "t": "Bergero"
+    },
+    "2026-11-18": {
+      "t": "Croce Bianca"
+    },
+    "2026-11-19": {
+      "t": "Tarantola"
+    },
+    "2026-11-20": {
+      "t": "Farmaceutica"
+    },
+    "2026-11-21": {
+      "t": "Felia Prione"
+    },
+    "2026-11-22": {
+      "t": "Farina",
+      "c": "Del Fico"
+    },
+    "2026-11-23": {
+      "t": "Di Prima"
+    },
+    "2026-11-24": {
+      "t": "Centrale"
+    },
+    "2026-11-25": {
+      "t": "Dell'Arsenale"
+    },
+    "2026-11-26": {
+      "t": "S.ta Barbara"
+    },
+    "2026-11-27": {
+      "t": "Migliarina"
     }
   }
 }
