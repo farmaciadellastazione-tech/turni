@@ -1204,9 +1204,22 @@ function renderNext() {
 // disponibile (kiosk e mobile, vedi .search-fab), sopra allo spot pubblicitario che viene
 // messo in pausa finché il pannello resta aperto. ---
 let searchFarmPopolato = false;
+// Chiusura automatica per inattività: sul totem il pannello lasciato aperto da un cliente
+// non deve restare lì per il successivo. Ogni interazione dentro il pannello riarma il timer.
+const RICERCA_INATTIVITA_MS = 60 * 1000;
+let searchIdleTimer = null;
+function riarmaChiusuraRicerca() {
+  clearTimeout(searchIdleTimer);
+  searchIdleTimer = setTimeout(chiudiRicerca, RICERCA_INATTIVITA_MS);
+}
+['pointerdown', 'keydown', 'input', 'change', 'scroll', 'wheel'].forEach(ev =>
+  document.getElementById('searchOverlay').addEventListener(ev, () => {
+    if (document.getElementById('searchOverlay').style.display !== 'none') riarmaChiusuraRicerca();
+  }, { capture: true, passive: true }));
 
 function apriRicerca() {
   document.getElementById('searchOverlay').style.display = '';
+  riarmaChiusuraRicerca();
   clearTimeout(spotTimer);
   nascondiSpot(); // nasconde un eventuale spot già in mostra, così non resta "incollato" sotto il pannello
   if (!searchFarmPopolato) popolaSelectFarmacie();
@@ -1218,6 +1231,12 @@ function apriRicerca() {
 }
 function chiudiRicerca() {
   document.getElementById('searchOverlay').style.display = 'none';
+  clearTimeout(searchIdleTimer);
+  // Riparte da zero: alla prossima apertura data di oggi, scheda "per data", nessuna farmacia scelta.
+  document.getElementById('searchDateInput').value = '';
+  document.getElementById('searchFarmSelect').selectedIndex = 0;
+  document.getElementById('searchResultsFarm').innerHTML = '';
+  setSearchTab('data');
   pianificaSpot(); // riprende la programmazione dello spot
 }
 function setSearchTab(tab) {
