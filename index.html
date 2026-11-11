@@ -1204,18 +1204,22 @@ function renderNext() {
 // disponibile (kiosk e mobile, vedi .search-fab), sopra allo spot pubblicitario che viene
 // messo in pausa finché il pannello resta aperto. ---
 let searchFarmPopolato = false;
-// Chiusura automatica per inattività: sul totem il pannello lasciato aperto da un cliente
-// non deve restare lì per il successivo. Ogni interazione dentro il pannello riarma il timer.
+// Chiusura automatica per inattività, SOLO sul totem: il pannello lasciato aperto da un
+// cliente non deve restare lì (né conservare la sua ricerca) per il successivo. Sul telefono
+// è un uso personale: niente timer e la ricerca resta com'era fino alla prossima apertura.
+// Ogni interazione dentro il pannello riarma il timer. Nota: i tocchi dentro la tendina
+// nativa della <select> e nel calendario del campo data li gestisce il browser e non
+// arrivano alla pagina; focusin/click/change riarmano almeno all'apertura e alla scelta.
 const RICERCA_INATTIVITA_MS = 60 * 1000;
 let searchIdleTimer = null;
 function riarmaChiusuraRicerca() {
+  if (isMobile()) return;
   clearTimeout(searchIdleTimer);
   searchIdleTimer = setTimeout(chiudiRicerca, RICERCA_INATTIVITA_MS);
 }
-['pointerdown', 'keydown', 'input', 'change', 'scroll', 'wheel'].forEach(ev =>
-  document.getElementById('searchOverlay').addEventListener(ev, () => {
-    if (document.getElementById('searchOverlay').style.display !== 'none') riarmaChiusuraRicerca();
-  }, { capture: true, passive: true }));
+// Un elemento con display:none non riceve eventi: basta ascoltare, senza controllare se è aperto.
+['pointerdown', 'pointermove', 'click', 'focusin', 'keydown', 'input', 'change', 'scroll', 'wheel'].forEach(ev =>
+  document.getElementById('searchOverlay').addEventListener(ev, riarmaChiusuraRicerca, { capture: true, passive: true }));
 
 function apriRicerca() {
   document.getElementById('searchOverlay').style.display = '';
@@ -1230,14 +1234,23 @@ function apriRicerca() {
   cercaPerData();
 }
 function chiudiRicerca() {
-  document.getElementById('searchOverlay').style.display = 'none';
+  const overlay = document.getElementById('searchOverlay');
+  // Toglie il focus da un eventuale campo del pannello: nascosto, terrebbe aperta la
+  // tastiera a schermo e riceverebbe i tasti premuti dopo.
+  if (overlay.contains(document.activeElement)) document.activeElement.blur();
+  overlay.style.display = 'none';
   clearTimeout(searchIdleTimer);
-  // Riparte da zero: alla prossima apertura data di oggi, scheda "per data", nessuna farmacia scelta.
+  if (!isMobile()) azzeraRicerca();
+  pianificaSpot(); // riprende la programmazione dello spot
+}
+// Sul totem la ricerca riparte da zero: alla prossima apertura data di oggi (la mette
+// apriRicerca), scheda "per data", nessuna farmacia scelta, nessun risultato vecchio.
+function azzeraRicerca() {
   document.getElementById('searchDateInput').value = '';
-  document.getElementById('searchFarmSelect').selectedIndex = 0;
+  document.getElementById('searchFarmSelect').value = ''; // il segnaposto ha value="", in qualunque posizione sia
+  document.getElementById('searchResultsData').innerHTML = '';
   document.getElementById('searchResultsFarm').innerHTML = '';
   setSearchTab('data');
-  pianificaSpot(); // riprende la programmazione dello spot
 }
 function setSearchTab(tab) {
   const isData = tab === 'data';
