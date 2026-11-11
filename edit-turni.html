@@ -145,11 +145,6 @@
         </select>
       </div>
       <div class="field">
-        <label>Orario fine turno</label>
-        <input type="time" id="fFine" value="08:30">
-        <div class="field-hint">Di norma 08:30 del giorno successivo</div>
-      </div>
-      <div class="field">
         <label>Apertura straordinaria</label>
         <input type="text" id="fStraord" placeholder="es. Beretta 8:00–20:00">
       </div>
@@ -529,7 +524,7 @@ async function importaBollettino(file) {
       return;
     }
     diffs.forEach(k => {
-      const next = Object.assign({}, overrides[k], { t: turni[k].t }); // preserva fineOra/straord/nota
+      const next = Object.assign({}, overrides[k], { t: turni[k].t }); // preserva straord/nota
       if (turni[k].c) next.c = turni[k].c; else delete next.c;
       overrides[k] = next;
     });
@@ -644,7 +639,6 @@ function openModal(key, date) {
   const nome = ov.t !== undefined ? ov.t : (base ? base.t : '');
   const cont = ov.c !== undefined ? ov.c : (base ? (base.c || '') : '');
   populateSelects(nome, cont);
-  document.getElementById('fFine').value = ov.fineOra || '08:30';
   document.getElementById('fStraord').value = ov.straord || '';
   document.getElementById('fNota').value = ov.nota || '';
   const G = GIORNI_IT[date.getDay()];
@@ -659,7 +653,6 @@ function snapshotModal() {
   return JSON.stringify([
     document.getElementById('fTurno').value,
     document.getElementById('fContorno').value,
-    document.getElementById('fFine').value,
     document.getElementById('fStraord').value.trim(),
     document.getElementById('fNota').value.trim()
   ]);
@@ -683,13 +676,13 @@ function saveDay() {
   const base = TURNI_BASE[editKey];
   const t = document.getElementById('fTurno').value;
   const c = document.getElementById('fContorno').value;
-  const fineOra = document.getElementById('fFine').value;
+  // Niente "orario fine turno": il turno finisce sempre alle 08:30 del giorno dopo. Un
+  // eventuale fineOra di vecchi override sparisce al primo salvataggio del giorno.
   const straord = document.getElementById('fStraord').value.trim();
   const nota = document.getElementById('fNota').value.trim();
   const isDefault =
     t === (base ? base.t : '') &&
     c === (base ? (base.c || '') : '') &&
-    fineOra === '08:30' &&
     !straord && !nota;
   if (isDefault) {
     delete overrides[editKey];
@@ -697,7 +690,6 @@ function saveDay() {
     const ov = {};
     if (t !== (base ? base.t : '')) ov.t = t;
     if (c !== (base ? (base.c || '') : '')) ov.c = c;
-    if (fineOra !== '08:30') ov.fineOra = fineOra;
     if (straord) ov.straord = straord;
     if (nota) ov.nota = nota;
     overrides[editKey] = ov;
