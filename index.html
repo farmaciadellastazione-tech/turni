@@ -1094,7 +1094,11 @@ function buildFarmCard(e) {
 // farmacia di turno è ancora quella del giorno prima, che finisce alle 08:30 di oggi).
 function fmtFineTurno(fine) {
   const p = n => String(n).padStart(2, '0');
-  return p(fine.getDate()) + '/' + p(fine.getMonth() + 1) + ' ' + p(fine.getHours()) + ':' + p(fine.getMinutes());
+  return p(fine.getDate()) + '/' + p(fine.getMonth() + 1) + ' ' + fmtOra(fine);
+}
+// "08:30": solo l'ora di una data.
+function fmtOra(d) {
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 // Fine del turno di un giorno (chiave YYYY-MM-DD): il giorno dopo alle 08:30. Il turno
 // finisce SEMPRE alle 08:30 (indicazione del titolare): l'eventuale fineOra degli override
@@ -1329,7 +1333,7 @@ function avvisoTurnoNotte(key, oggiHaDati) {
   const attivo = getTurnoAttivo();
   if (key !== toKey(new Date()) || attivo.key === key || !attivo.turno || !attivo.turno.t) return null;
   // Ora del cambio turno dallo stesso calcolo della "Fine turno" (fineTurnoGiorno): "08:30".
-  const ora = fmtFineTurno(attivo.fine).split(' ')[1];
+  const ora = fmtOra(attivo.fine);
   const box = document.createElement('div');
   box.className = 'search-avviso';
   box.appendChild(document.createTextNode('⚠️ Fino alle ' + ora + ' la farmacia di turno è ancora '));
