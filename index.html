@@ -197,6 +197,9 @@
   .search-input { width: 100%; padding: 9px 10px; font-size: 15px; border: 1px solid #cfd8d2; border-radius: 6px; margin-bottom: 12px; font-family: inherit; }
   .search-results { display: flex; flex-direction: column; gap: 10px; }
   .search-empty { font-size: 13px; color: #888; text-align: center; padding: 14px 0; }
+  /* Avviso notturno nella ricerca per data (vedi avvisoTurnoNotte) */
+  .search-avviso { background: #fff4d6; border: 1px solid #f0c040; border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.4; color: #5a4300; }
+  .search-avviso button { font: inherit; font-weight: 700; background: none; border: 0; padding: 0; color: #1a5a1a; text-decoration: underline; cursor: pointer; }
   .search-result-card { background: #f5f7f5; border-radius: 8px; padding: 10px 12px; }
   .search-result-role { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #117e09; margin-bottom: 3px; }
   .search-result-name { font-size: 16px; font-weight: 800; color: #1a1a1a; }
@@ -1319,14 +1322,34 @@ function buildSearchCard(ruolo, nome, meta) {
   return card;
 }
 
+// Avviso tra mezzanotte e le 08:30 quando si cerca la data di oggi: il turno di oggi non è
+// ancora iniziato, la farmacia di turno in questo momento è quella di ieri. Il nome è un
+// pulsante che riporta la ricerca sul turno in corso. Ritorna null se l'avviso non serve.
+function avvisoTurnoNotte(key) {
+  const attivo = getTurnoAttivo();
+  if (key !== toKey(new Date()) || attivo.key === key || !attivo.turno || !attivo.turno.t) return null;
+  const box = document.createElement('div');
+  box.className = 'search-avviso';
+  box.appendChild(document.createTextNode('⚠️ Fino alle 08:30 la farmacia di turno è ancora '));
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = 'Farm. ' + attivo.turno.t;
+  btn.onclick = () => { document.getElementById('searchDateInput').value = attivo.key; cercaPerData(); };
+  box.appendChild(btn);
+  box.appendChild(document.createTextNode(' (turno di ieri). Quella qui sotto inizia oggi alle 08:30.'));
+  return box;
+}
+
 function cercaPerData() {
   const key = document.getElementById('searchDateInput').value;
   const list = document.getElementById('searchResultsData');
   list.innerHTML = '';
   if (!key) return;
+  const avviso = avvisoTurnoNotte(key);
+  if (avviso) list.appendChild(avviso);
   const turno = getTurnoGiorno(key);
   if (!turno || !turno.t) {
-    list.innerHTML = '<div class="search-empty">Nessun dato per questa data.</div>';
+    list.insertAdjacentHTML('beforeend', '<div class="search-empty">Nessun dato per questa data.</div>'); // senza cancellare l'avviso
     return;
   }
   const dataTxt = fmtDate(new Date(key + 'T00:00:00'));
