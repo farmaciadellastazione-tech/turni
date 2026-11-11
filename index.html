@@ -1401,7 +1401,17 @@ function buildSearchCard(ruolo, nome, meta) {
   const contact = document.createElement('div'); contact.className = 'search-result-meta';
   renderContactInto(contact, nome);
   card.appendChild(contact);
-  if (meta) { const m = document.createElement('div'); m.className = 'search-result-meta search-result-info'; m.textContent = meta; card.appendChild(m); } // search-result-info: RTL in arabo
+  // meta: elenco di pezzi (data, fine turno, note…) uniti da " · ". Ogni pezzo sta in un
+  // <bdi>: in arabo (riga RTL) una nota in italiano o un orario non si mescolano coi vicini.
+  if (meta && meta.length) {
+    const m = document.createElement('div');
+    m.className = 'search-result-meta search-result-info'; // search-result-info: RTL in arabo
+    meta.forEach((pezzo, i) => {
+      if (i) m.appendChild(document.createTextNode(' · '));
+      const b = document.createElement('bdi'); b.textContent = pezzo; m.appendChild(b);
+    });
+    card.appendChild(m);
+  }
   return card;
 }
 
@@ -1459,8 +1469,8 @@ function cercaPerData() {
   if (turno.straord) bits.push('★ ' + turno.straord);
   if (turno.nota) bits.push('📌 ' + turno.nota);
   if (turno.modificato) bits.push('✎ ' + t('modified'));
-  list.appendChild(buildSearchCard(tc('turno24h'), turno.t, bits.join(' · ')));
-  if (turno.c) list.appendChild(buildSearchCard(t('conturno'), turno.c, dataTxt + ' · ' + tc('finoAlle', statoConturno(key).fine)));
+  list.appendChild(buildSearchCard(tc('turno24h'), turno.t, bits));
+  if (turno.c) list.appendChild(buildSearchCard(t('conturno'), turno.c, [dataTxt, tc('finoAlle', statoConturno(key).fine)]));
 }
 
 // Prossimi turni futuri (da oggi in poi, farmacia scelta come turno 24h o conturno).
