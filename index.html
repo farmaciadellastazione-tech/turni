@@ -1336,6 +1336,9 @@ function avvisoTurnoNotte(key, oggiHaDati) {
   const ora = fmtOra(attivo.fine);
   const box = document.createElement('div');
   box.className = 'search-avviso';
+  // role="alert" (e non "status"): il riquadro viene creato già pieno, e solo "alert" viene
+  // letto in modo affidabile dagli screen reader anche se inserito con il testo dentro.
+  box.setAttribute('role', 'alert');
   // Senza i dati del turno di ieri (es. Capodanno con l'anno prima non caricato) non si può
   // nominare la farmacia, ma si avvisa comunque che il turno di oggi non è ancora iniziato.
   if (!attivo.turno || !attivo.turno.t) {
