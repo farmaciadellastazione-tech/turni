@@ -406,7 +406,9 @@
     </div>
     <div class="search-body" id="searchBodyData">
       <input type="date" id="searchDateInput" class="search-input" onchange="cercaPerData()">
-      <div class="search-results" id="searchResultsData"></div>
+      <!-- aria-live sul contenitore fisso: gli screen reader leggono, senza interrompere, i
+           risultati (e l'avviso notturno) a ogni nuova ricerca. -->
+      <div class="search-results" id="searchResultsData" aria-live="polite"></div>
     </div>
     <div class="search-body" id="searchBodyFarm" style="display:none">
       <select id="searchFarmSelect" class="search-input" onchange="cercaPerFarmacia()"></select>
@@ -1336,9 +1338,6 @@ function avvisoTurnoNotte(key, oggiHaDati) {
   const ora = fmtOra(attivo.fine);
   const box = document.createElement('div');
   box.className = 'search-avviso';
-  // role="alert" (e non "status"): il riquadro viene creato già pieno, e solo "alert" viene
-  // letto in modo affidabile dagli screen reader anche se inserito con il testo dentro.
-  box.setAttribute('role', 'alert');
   // Senza i dati del turno di ieri (es. Capodanno con l'anno prima non caricato) non si può
   // nominare la farmacia, ma si avvisa comunque che il turno di oggi non è ancora iniziato.
   // Se mancano anche i dati di oggi non c'è niente da precisare: basta "Nessun dato".
