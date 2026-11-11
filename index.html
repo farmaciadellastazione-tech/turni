@@ -197,6 +197,9 @@
   .search-input { width: 100%; padding: 9px 10px; font-size: 15px; border: 1px solid #cfd8d2; border-radius: 6px; margin-bottom: 12px; font-family: inherit; }
   .search-results { display: flex; flex-direction: column; gap: 10px; }
   .search-empty { font-size: 13px; color: #888; text-align: center; padding: 14px 0; }
+  /* Avviso notturno nella ricerca per data (vedi avvisoTurnoNotte) */
+  .search-avviso { background: #fff4d6; border: 1px solid #f0c040; border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.4; color: #5a4300; }
+  .search-avviso button { font: inherit; font-weight: 700; background: none; border: 0; padding: 0; color: #1a5a1a; text-decoration: underline; cursor: pointer; }
   .search-result-card { background: #f5f7f5; border-radius: 8px; padding: 10px 12px; }
   .search-result-role { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #117e09; margin-bottom: 3px; }
   .search-result-name { font-size: 16px; font-weight: 800; color: #1a1a1a; }
@@ -1091,7 +1094,11 @@ function buildFarmCard(e) {
 // farmacia di turno è ancora quella del giorno prima, che finisce alle 08:30 di oggi).
 function fmtFineTurno(fine) {
   const p = n => String(n).padStart(2, '0');
-  return p(fine.getDate()) + '/' + p(fine.getMonth() + 1) + ' ' + p(fine.getHours()) + ':' + p(fine.getMinutes());
+  return p(fine.getDate()) + '/' + p(fine.getMonth() + 1) + ' ' + fmtOra(fine);
+}
+// "08:30": solo l'ora di una data.
+function fmtOra(d) {
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 // Fine del turno di un giorno (chiave YYYY-MM-DD): il giorno dopo alle 08:30. Il turno
 // finisce SEMPRE alle 08:30 (indicazione del titolare): l'eventuale fineOra degli override
@@ -1319,14 +1326,47 @@ function buildSearchCard(ruolo, nome, meta) {
   return card;
 }
 
+// Avviso tra mezzanotte e le 08:30 quando si cerca la data di oggi: il turno di oggi non è
+// ancora iniziato, la farmacia di turno in questo momento è quella di ieri. Il nome è un
+// pulsante che riporta la ricerca sul turno in corso. Ritorna null se l'avviso non serve.
+function avvisoTurnoNotte(key, oggiHaDati) {
+  const attivo = getTurnoAttivo();
+  if (key !== toKey(new Date()) || attivo.key === key) return null;
+  // Ora del cambio turno dallo stesso calcolo della "Fine turno" (fineTurnoGiorno): "08:30".
+  const ora = fmtOra(attivo.fine);
+  const box = document.createElement('div');
+  box.className = 'search-avviso';
+  // Senza i dati del turno di ieri (es. Capodanno con l'anno prima non caricato) non si può
+  // nominare la farmacia: se oggi ha dati si avvisa che il turno qui sotto non è ancora
+  // iniziato; se mancano anche quelli di oggi niente avviso, basta "Nessun dato".
+  if (!attivo.turno || !attivo.turno.t) {
+    if (!oggiHaDati) return null;
+    box.textContent = '⚠️ Il turno qui sotto inizia oggi alle ' + ora + ': fino ad allora è di turno un\'altra farmacia.';
+    return box;
+  }
+  box.appendChild(document.createTextNode('⚠️ Fino alle ' + ora + ' la farmacia di turno è ancora '));
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = 'Farm. ' + attivo.turno.t;
+  // Il turno in corso si ricalcola al tocco: se nel frattempo sono passate le 08:30 si va
+  // sul turno di oggi, non su quello (ormai finito) di quando l'avviso è comparso.
+  btn.onclick = () => { document.getElementById('searchDateInput').value = getTurnoAttivo().key; cercaPerData(); };
+  box.appendChild(btn);
+  // "Quella qui sotto" solo se sotto c'è davvero una farmacia (altrimenti c'è "Nessun dato").
+  box.appendChild(document.createTextNode(' (turno di ieri).' + (oggiHaDati ? ' Quella qui sotto inizia oggi alle ' + ora + '.' : '')));
+  return box;
+}
+
 function cercaPerData() {
   const key = document.getElementById('searchDateInput').value;
   const list = document.getElementById('searchResultsData');
   list.innerHTML = '';
   if (!key) return;
   const turno = getTurnoGiorno(key);
+  const avviso = avvisoTurnoNotte(key, !!(turno && turno.t));
+  if (avviso) list.appendChild(avviso);
   if (!turno || !turno.t) {
-    list.innerHTML = '<div class="search-empty">Nessun dato per questa data.</div>';
+    list.insertAdjacentHTML('beforeend', '<div class="search-empty">Nessun dato per questa data.</div>'); // senza cancellare l'avviso
     return;
   }
   const dataTxt = fmtDate(new Date(key + 'T00:00:00'));
