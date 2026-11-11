@@ -1306,6 +1306,12 @@ function riarmaChiusuraRicerca() {
   if (isMobile()) return;
   clearTimeout(searchIdleTimer);
   searchIdleTimer = setTimeout(chiudiRicerca, RICERCA_INATTIVITA_MS);
+  // Chi usa il pannello in un'altra lingua la sta usando: riparte anche il ritorno
+  // all'italiano (90 s, vedi setLang), così non cambia lingua mentre legge.
+  if (LANG !== 'it') {
+    clearTimeout(langResetTimer);
+    langResetTimer = setTimeout(() => setLang('it'), 90000);
+  }
 }
 // Un elemento con display:none non riceve eventi: basta ascoltare, senza controllare se è aperto.
 ['pointerdown', 'pointermove', 'click', 'focusin', 'keydown', 'input', 'change', 'scroll', 'wheel'].forEach(ev =>
