@@ -694,6 +694,11 @@ function applyLangRicerca() {
   // aggiorna solo il testo della prima voce, senza toccare la scelta fatta).
   const segnaposto = document.querySelector('#searchFarmSelect option[value=""]');
   if (segnaposto) segnaposto.textContent = tc('scegli');
+  // Pannello aperto: rifà le ricerche in corso, così i risultati passano subito alla nuova lingua.
+  if (document.getElementById('searchOverlay').style.display !== 'none') {
+    cercaPerData();
+    if (document.getElementById('searchFarmSelect').value) cercaPerFarmacia();
+  }
 }
 
 // Applica la lingua corrente: etichette statiche, verso del testo (RTL per l'arabo)
@@ -1400,10 +1405,13 @@ function avvisoTurnoNotte(key, oggiHaDati) {
   // iniziato; se mancano anche quelli di oggi niente avviso, basta "Nessun dato".
   if (!attivo.turno || !attivo.turno.t) {
     if (!oggiHaDati) return null;
-    box.textContent = '⚠️ Il turno qui sotto inizia oggi alle ' + ora + ': fino ad allora è di turno un\'altra farmacia.';
+    box.textContent = tc('avvisoGenerico', ora);
     return box;
   }
-  box.appendChild(document.createTextNode('⚠️ Fino alle ' + ora + ' la farmacia di turno è ancora '));
+  // Il testo tradotto ha il segnaposto {farm} dove va il nome (pulsante): prima e dopo
+  // restano testo semplice, così ogni lingua mette il nome nel punto giusto della frase.
+  const [prima, dopo] = tc('avviso', ora).split('{farm}');
+  box.appendChild(document.createTextNode(prima));
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.textContent = 'Farm. ' + attivo.turno.t;
@@ -1412,7 +1420,8 @@ function avvisoTurnoNotte(key, oggiHaDati) {
   btn.onclick = () => { document.getElementById('searchDateInput').value = getTurnoAttivo().key; cercaPerData(); };
   box.appendChild(btn);
   // "Quella qui sotto" solo se sotto c'è davvero una farmacia (altrimenti c'è "Nessun dato").
-  box.appendChild(document.createTextNode(' (turno di ieri).' + (oggiHaDati ? ' Quella qui sotto inizia oggi alle ' + ora + '.' : '')));
+  const spazio = (LANG === 'ja' || LANG === 'zh') ? '' : ' '; // in giapponese e cinese le frasi non si separano con lo spazio
+  box.appendChild(document.createTextNode((dopo || '') + (oggiHaDati ? spazio + tc('avvisoSotto', ora) : '')));
   return box;
 }
 
@@ -1425,16 +1434,18 @@ function cercaPerData() {
   const avviso = avvisoTurnoNotte(key, !!(turno && turno.t));
   if (avviso) list.appendChild(avviso);
   if (!turno || !turno.t) {
-    list.insertAdjacentHTML('beforeend', '<div class="search-empty">Nessun dato per questa data.</div>'); // senza cancellare l'avviso
+    const vuoto = document.createElement('div'); // aggiunto senza cancellare l'avviso
+    vuoto.className = 'search-empty'; vuoto.textContent = tc('nessunDato');
+    list.appendChild(vuoto);
     return;
   }
   const dataTxt = fmtDate(new Date(key + 'T00:00:00'));
   const bits = [dataTxt, t('shiftEnd') + ' ' + fmtFineTurno(fineTurnoGiorno(key))];
   if (turno.straord) bits.push('★ ' + turno.straord);
   if (turno.nota) bits.push('📌 ' + turno.nota);
-  if (turno.modificato) bits.push('✎ modificato');
-  list.appendChild(buildSearchCard('Turno 24h', turno.t, bits.join(' · ')));
-  if (turno.c) list.appendChild(buildSearchCard('Conturno', turno.c, dataTxt + ' · fino alle ' + statoConturno(key).fine));
+  if (turno.modificato) bits.push('✎ ' + t('modified'));
+  list.appendChild(buildSearchCard(tc('turno24h'), turno.t, bits.join(' · ')));
+  if (turno.c) list.appendChild(buildSearchCard(t('conturno'), turno.c, dataTxt + ' · ' + tc('finoAlle', statoConturno(key).fine)));
 }
 
 // Prossimi turni futuri (da oggi in poi, farmacia scelta come turno 24h o conturno).
@@ -1456,12 +1467,18 @@ function cercaPerFarmacia() {
     const d = new Date(key + 'T00:00:00');
     const item = document.createElement('div');
     item.className = 'search-farm-item';
-    const giorno = d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
-    const ruolo = isTurno ? 'Turno 24h' : 'Conturno';
-    item.innerHTML = `<span>${giorno}</span><span class="role">${ruolo}</span>`;
+    const giorno = d.toLocaleDateString(LOCALE[LANG] || 'it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+    const ruolo = isTurno ? tc('turno24h') : t('conturno');
+    const sG = document.createElement('span'); sG.textContent = giorno;
+    const sR = document.createElement('span'); sR.className = 'role'; sR.textContent = ruolo;
+    item.appendChild(sG); item.appendChild(sR);
     list.appendChild(item);
   });
-  if (!trovati) list.innerHTML = '<div class="search-empty">Nessun turno futuro trovato per questa farmacia.</div>';
+  if (!trovati) {
+    const vuoto = document.createElement('div');
+    vuoto.className = 'search-empty'; vuoto.textContent = tc('nessunFuturo');
+    list.appendChild(vuoto);
+  }
 }
 
 // Mappa Leaflet con i marker delle farmacie aperte (turno + conturno se aperto)
