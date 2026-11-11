@@ -789,10 +789,11 @@ function getTurnoGiorno(key) {
   return {
     t: ov.t !== undefined ? ov.t : (base ? base.t : null),
     c: ov.c !== undefined ? ov.c : (base ? base.c : undefined),
-    fineOra: ov.fineOra || '08:30',
+    // Niente fineOra: il turno finisce sempre alle 08:30 (vedi fineTurnoGiorno); un vecchio
+    // fineOra negli override viene ignorato e non segna il giorno come modificato.
     straord: ov.straord || null,
     nota: ov.nota || null,
-    modificato: !!(tDiff || cDiff || ov.fineOra || ov.straord || ov.nota)
+    modificato: !!(tDiff || cDiff || ov.straord || ov.nota)
   };
 }
 
