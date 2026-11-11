@@ -524,7 +524,7 @@ async function importaBollettino(file) {
       return;
     }
     diffs.forEach(k => {
-      const next = Object.assign({}, overrides[k], { t: turni[k].t }); // preserva straord/nota
+      const next = Object.assign({}, overrides[k], { t: turni[k].t }); // preserva gli altri campi (straord/nota)
       if (turni[k].c) next.c = turni[k].c; else delete next.c;
       overrides[k] = next;
     });
