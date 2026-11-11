@@ -1093,8 +1093,23 @@ function buildFarmCard(e) {
 // Mostra le farmacie aperte ora (turno 24h + conturno se aperto) ordinate per
 // vicinanza al kiosk: il ruolo turno/conturno non è enfatizzato, conta dove sono e
 // fino a quando sono aperte. La sera (conturno chiuso) resta solo il turno 24h.
+// "12/11 08:30": fine di un turno, per dire fino a quando vale (alle 4 del mattino la
+// farmacia di turno è ancora quella del giorno prima, che finisce alle 08:30 di oggi).
+function fmtFineTurno(fine) {
+  const p = n => String(n).padStart(2, '0');
+  return p(fine.getDate()) + '/' + p(fine.getMonth() + 1) + ' ' + p(fine.getHours()) + ':' + p(fine.getMinutes());
+}
+// Fine del turno di un giorno (chiave YYYY-MM-DD): il giorno dopo, all'ora fineOra (default 08:30).
+function fineTurnoGiorno(key, turno) {
+  const fine = new Date(key + 'T00:00:00');
+  fine.setDate(fine.getDate() + 1);
+  const [fh, fm] = (turno && turno.fineOra ? turno.fineOra : '08:30').split(':').map(Number);
+  fine.setHours(fh, fm, 0, 0);
+  return fine;
+}
+
 function renderToday() {
-  const { turno, key } = getTurnoAttivo();
+  const { turno, key, fine } = getTurnoAttivo();
   const cont = document.getElementById('turnoList');
   cont.innerHTML = '';
   if (!turno || !turno.t) {
@@ -1112,7 +1127,7 @@ function renderToday() {
   if (turno.straord) badges.push({ cls: 'badge-straord', txt: '★ ' + turno.straord });
   if (turno.nota) badges.push({ cls: 'badge-nota', txt: '📌 ' + turno.nota });
   if (turno.modificato) badges.push({ cls: 'badge-nota', txt: '✎ ' + t('modified') });
-  entries.push({ nome: turno.t, orario: O[0], badges });           // turno 24h
+  entries.push({ nome: turno.t, orario: O[0] + ' · ' + t('shiftEnd') + ' ' + fmtFineTurno(fine), badges }); // turno 24h
   if (turno.c) {
     const sc = statoConturno(key);
     if (sc.aperto) entries.push({ nome: turno.c, orario: O[1] + ' ' + sc.fine, badges: [] });  // conturno
@@ -1319,7 +1334,7 @@ function cercaPerData() {
     return;
   }
   const dataTxt = fmtDate(new Date(key + 'T00:00:00'));
-  const bits = [dataTxt];
+  const bits = [dataTxt, t('shiftEnd') + ' ' + fmtFineTurno(fineTurnoGiorno(key, turno))];
   if (turno.straord) bits.push('★ ' + turno.straord);
   if (turno.nota) bits.push('📌 ' + turno.nota);
   if (turno.modificato) bits.push('✎ modificato');
