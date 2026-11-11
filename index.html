@@ -54,9 +54,9 @@
   body.rtl .search-result-role,
   body.rtl .search-result-info,
   body.rtl .search-avviso,
-  body.rtl .search-empty,
   body.rtl .search-farm-item { direction: rtl; text-align: right; }
-  body.rtl .search-tab { direction: rtl; } /* schede: RTL ma restano centrate */
+  body.rtl .search-tab,
+  body.rtl .search-empty { direction: rtl; } /* schede e messaggio vuoto: RTL ma restano centrati */
   /* Colonne proporzionali (non px fissi): il kiosk è ad alta risoluzione (~3050×2250),
      una larghezza fissa renderebbe la colonna destra/mappa una sottile striscia. */
   /* grid-template-rows: minmax(0,1fr) vincola la riga all'altezza dello schermo (non al
