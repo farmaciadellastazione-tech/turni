@@ -1341,8 +1341,10 @@ function avvisoTurnoNotte(key, oggiHaDati) {
   box.setAttribute('role', 'alert');
   // Senza i dati del turno di ieri (es. Capodanno con l'anno prima non caricato) non si può
   // nominare la farmacia, ma si avvisa comunque che il turno di oggi non è ancora iniziato.
+  // Se mancano anche i dati di oggi non c'è niente da precisare: basta "Nessun dato".
   if (!attivo.turno || !attivo.turno.t) {
-    box.textContent = '⚠️ Il turno di oggi inizia alle ' + ora + '.' + (oggiHaDati ? ' Fino ad allora vale ancora quello di ieri.' : '');
+    if (!oggiHaDati) return null;
+    box.textContent = '⚠️ La farmacia qui sotto è di turno da oggi alle ' + ora + '.';
     return box;
   }
   box.appendChild(document.createTextNode('⚠️ Fino alle ' + ora + ' la farmacia di turno è ancora '));
