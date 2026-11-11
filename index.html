@@ -47,7 +47,16 @@
   body.rtl .servizi-title,
   body.rtl .annunci-box-title,
   body.rtl #footerLegal,
-  body.rtl .qr-text { direction: rtl; text-align: right; }
+  body.rtl .qr-text,
+  /* Pannello "Cerca turno": stesso criterio, solo i testi tradotti (titolo, schede, ruolo,
+     riga data/fine turno, avviso, messaggi); indirizzo/telefono della scheda restano LTR. */
+  body.rtl .search-title,
+  body.rtl .search-result-role,
+  body.rtl .search-result-info,
+  body.rtl .search-avviso,
+  body.rtl .search-farm-item { direction: rtl; text-align: right; }
+  body.rtl .search-tab,
+  body.rtl .search-empty { direction: rtl; } /* schede e messaggio vuoto: RTL ma restano centrati */
   /* Colonne proporzionali (non px fissi): il kiosk è ad alta risoluzione (~3050×2250),
      una larghezza fissa renderebbe la colonna destra/mappa una sottile striscia. */
   /* grid-template-rows: minmax(0,1fr) vincola la riga all'altezza dello schermo (non al
@@ -635,9 +644,71 @@ const I18N_NOTTE = {
   ja: ['📞 夜間の呼び出し料金：€10.00', '閉店時の対応は緊急の医薬品のみ'],
   ko: ['📞 야간 호출료: €10.00', '닫힌 문 서비스, 긴급 의약품만']
 };
+// Pannello "Cerca turno" (vedi tc()). Segnaposto: {ora} = "08:30"/"20:00", {farm} = nome
+// della farmacia (nell'avviso diventa un pulsante, per questo è un segnaposto: in ogni
+// lingua il nome va nel punto giusto della frase). "Conturno", "modificato" e "Fine turno"
+// vengono da I18N (t()).
+const I18N_CERCA = {
+  it: { cerca:'Cerca turno', chiudi:'Chiudi', perData:'Per data', perFarmacia:'Per farmacia', scegli:'— Scegli una farmacia —', turno24h:'Turno 24h', nessunDato:'Nessun dato per questa data.', nessunFuturo:'Nessun turno futuro trovato per questa farmacia.', finoAlle:'fino alle {ora}',
+        avviso:'⚠️ Fino alle {ora} la farmacia di turno è ancora {farm} (turno di ieri).', avvisoSotto:'Quella qui sotto inizia oggi alle {ora}.', avvisoGenerico:"⚠️ Il turno qui sotto inizia oggi alle {ora}: fino ad allora è di turno un'altra farmacia." },
+  en: { cerca:'Search shifts', chiudi:'Close', perData:'By date', perFarmacia:'By pharmacy', scegli:'— Choose a pharmacy —', turno24h:'24h shift', nessunDato:'No data for this date.', nessunFuturo:'No upcoming shifts found for this pharmacy.', finoAlle:'until {ora}',
+        avviso:"⚠️ Until {ora} the pharmacy on duty is still {farm} (yesterday's shift).", avvisoSotto:'The one below starts today at {ora}.', avvisoGenerico:'⚠️ The shift below starts today at {ora}: until then another pharmacy is on duty.' },
+  fr: { cerca:'Chercher une garde', chiudi:'Fermer', perData:'Par date', perFarmacia:'Par pharmacie', scegli:'— Choisir une pharmacie —', turno24h:'Garde 24h', nessunDato:'Aucune donnée pour cette date.', nessunFuturo:'Aucune garde à venir pour cette pharmacie.', finoAlle:"jusqu'à {ora}",
+        avviso:"⚠️ Jusqu'à {ora}, la pharmacie de garde est encore {farm} (garde d'hier).", avvisoSotto:"Celle ci-dessous commence aujourd'hui à {ora}.", avvisoGenerico:"⚠️ La garde ci-dessous commence aujourd'hui à {ora} : d'ici là, une autre pharmacie est de garde." },
+  es: { cerca:'Buscar guardia', chiudi:'Cerrar', perData:'Por fecha', perFarmacia:'Por farmacia', scegli:'— Elige una farmacia —', turno24h:'Guardia 24h', nessunDato:'No hay datos para esta fecha.', nessunFuturo:'No hay próximas guardias para esta farmacia.', finoAlle:'hasta las {ora}',
+        avviso:'⚠️ Hasta las {ora} la farmacia de guardia sigue siendo {farm} (guardia de ayer).', avvisoSotto:'La de abajo empieza hoy a las {ora}.', avvisoGenerico:'⚠️ La guardia de abajo empieza hoy a las {ora}: hasta entonces está de guardia otra farmacia.' },
+  de: { cerca:'Dienst suchen', chiudi:'Schließen', perData:'Nach Datum', perFarmacia:'Nach Apotheke', scegli:'— Apotheke wählen —', turno24h:'24h-Dienst', nessunDato:'Keine Daten für dieses Datum.', nessunFuturo:'Keine kommenden Dienste für diese Apotheke.', finoAlle:'bis {ora} Uhr',
+        avviso:'⚠️ Bis {ora} Uhr ist noch {farm} im Dienst (Dienst von gestern).', avvisoSotto:'Die unten angezeigte beginnt heute um {ora} Uhr.', avvisoGenerico:'⚠️ Der Dienst unten beginnt heute um {ora} Uhr: Bis dahin ist eine andere Apotheke im Dienst.' },
+  pt: { cerca:'Procurar plantão', chiudi:'Fechar', perData:'Por data', perFarmacia:'Por farmácia', scegli:'— Escolha uma farmácia —', turno24h:'Plantão 24h', nessunDato:'Sem dados para esta data.', nessunFuturo:'Nenhum plantão futuro para esta farmácia.', finoAlle:'até às {ora}',
+        avviso:'⚠️ Até às {ora} a farmácia de plantão ainda é {farm} (plantão de ontem).', avvisoSotto:'A de baixo começa hoje às {ora}.', avvisoGenerico:'⚠️ O plantão abaixo começa hoje às {ora}: até lá está de plantão outra farmácia.' },
+  zh: { cerca:'查询值班', chiudi:'关闭', perData:'按日期', perFarmacia:'按药房', scegli:'— 选择药房 —', turno24h:'24小时值班', nessunDato:'该日期无数据。', nessunFuturo:'未找到该药房的后续值班。', finoAlle:'至 {ora}',
+        avviso:'⚠️ {ora} 之前值班药房仍是 {farm}（昨天的值班）。', avvisoSotto:'下方药房今天 {ora} 开始值班。', avvisoGenerico:'⚠️ 下方的值班今天 {ora} 开始：在此之前由另一家药房值班。' },
+  ar: { cerca:'البحث عن مناوبة', chiudi:'إغلاق', perData:'حسب التاريخ', perFarmacia:'حسب الصيدلية', scegli:'— اختر صيدلية —', turno24h:'مناوبة 24 ساعة', nessunDato:'لا توجد بيانات لهذا التاريخ.', nessunFuturo:'لا توجد مناوبات قادمة لهذه الصيدلية.', finoAlle:'حتى {ora}',
+        avviso:'⚠️ حتى الساعة {ora} لا تزال الصيدلية المناوبة هي {farm} (مناوبة الأمس).', avvisoSotto:'الصيدلية أدناه تبدأ اليوم الساعة {ora}.', avvisoGenerico:'⚠️ المناوبة أدناه تبدأ اليوم الساعة {ora}: حتى ذلك الحين تناوب صيدلية أخرى.' },
+  ro: { cerca:'Caută gardă', chiudi:'Închide', perData:'După dată', perFarmacia:'După farmacie', scegli:'— Alege o farmacie —', turno24h:'Gardă 24h', nessunDato:'Nu există date pentru această dată.', nessunFuturo:'Nu s-au găsit gărzi viitoare pentru această farmacie.', finoAlle:'până la {ora}',
+        avviso:'⚠️ Până la {ora} farmacia de gardă este încă {farm} (garda de ieri).', avvisoSotto:'Cea de mai jos începe astăzi la {ora}.', avvisoGenerico:'⚠️ Garda de mai jos începe astăzi la {ora}: până atunci este de gardă o altă farmacie.' },
+  sq: { cerca:'Kërko kujdestarinë', chiudi:'Mbyll', perData:'Sipas datës', perFarmacia:'Sipas farmacisë', scegli:'— Zgjidh një farmaci —', turno24h:'Kujdestari 24 orë', nessunDato:'Nuk ka të dhëna për këtë datë.', nessunFuturo:'Nuk u gjetën kujdestari të ardhshme për këtë farmaci.', finoAlle:'deri në {ora}',
+        avviso:'⚠️ Deri në {ora} farmacia kujdestare është ende {farm} (kujdestaria e djeshme).', avvisoSotto:'Ajo më poshtë fillon sot në {ora}.', avvisoGenerico:'⚠️ Kujdestaria më poshtë fillon sot në {ora}: deri atëherë është kujdestare një farmaci tjetër.' },
+  uk: { cerca:'Пошук чергування', chiudi:'Закрити', perData:'За датою', perFarmacia:'За аптекою', scegli:'— Оберіть аптеку —', turno24h:'Чергування 24 год', nessunDato:'Немає даних на цю дату.', nessunFuturo:'Майбутніх чергувань цієї аптеки не знайдено.', finoAlle:'до {ora}',
+        avviso:'⚠️ До {ora} черговою аптекою все ще є {farm} (вчорашнє чергування).', avvisoSotto:'Аптека нижче починає сьогодні о {ora}.', avvisoGenerico:'⚠️ Чергування нижче починається сьогодні о {ora}: до того часу чергує інша аптека.' },
+  ru: { cerca:'Поиск дежурства', chiudi:'Закрыть', perData:'По дате', perFarmacia:'По аптеке', scegli:'— Выберите аптеку —', turno24h:'Дежурство 24 ч', nessunDato:'Нет данных на эту дату.', nessunFuturo:'Будущих дежурств этой аптеки не найдено.', finoAlle:'до {ora}',
+        avviso:'⚠️ До {ora} дежурной аптекой всё ещё является {farm} (вчерашнее дежурство).', avvisoSotto:'Аптека ниже начинает сегодня в {ora}.', avvisoGenerico:'⚠️ Дежурство ниже начинается сегодня в {ora}: до этого времени дежурит другая аптека.' },
+  bn: { cerca:'ডিউটি খুঁজুন', chiudi:'বন্ধ করুন', perData:'তারিখ অনুযায়ী', perFarmacia:'ফার্মেসি অনুযায়ী', scegli:'— একটি ফার্মেসি বেছে নিন —', turno24h:'২৪ ঘণ্টার ডিউটি', nessunDato:'এই তারিখের কোনো তথ্য নেই।', nessunFuturo:'এই ফার্মেসির কোনো আসন্ন ডিউটি পাওয়া যায়নি।', finoAlle:'{ora} পর্যন্ত',
+        avviso:'⚠️ {ora} পর্যন্ত ডিউটিতে থাকা ফার্মেসি এখনও {farm} (গতকালের ডিউটি)।', avvisoSotto:'নিচের ফার্মেসি আজ {ora} থেকে শুরু করবে।', avvisoGenerico:'⚠️ নিচের ডিউটি আজ {ora} থেকে শুরু: ততক্ষণ অন্য একটি ফার্মেসি ডিউটিতে আছে।' },
+  hi: { cerca:'ड्यूटी खोजें', chiudi:'बंद करें', perData:'तारीख से', perFarmacia:'फ़ार्मेसी से', scegli:'— एक फ़ार्मेसी चुनें —', turno24h:'24 घंटे की ड्यूटी', nessunDato:'इस तारीख का कोई डेटा नहीं।', nessunFuturo:'इस फ़ार्मेसी की कोई आगामी ड्यूटी नहीं मिली।', finoAlle:'{ora} तक',
+        avviso:'⚠️ {ora} तक ड्यूटी वाली फ़ार्मेसी अभी भी {farm} है (कल की ड्यूटी)।', avvisoSotto:'नीचे वाली आज {ora} से शुरू होगी।', avvisoGenerico:'⚠️ नीचे वाली ड्यूटी आज {ora} से शुरू होगी: तब तक कोई दूसरी फ़ार्मेसी ड्यूटी पर है।' },
+  ja: { cerca:'当番を検索', chiudi:'閉じる', perData:'日付で', perFarmacia:'薬局で', scegli:'— 薬局を選択 —', turno24h:'24時間当番', nessunDato:'この日付のデータはありません。', nessunFuturo:'この薬局の今後の当番は見つかりません。', finoAlle:'{ora}まで',
+        avviso:'⚠️ {ora}までの当番薬局はまだ{farm}です（昨日の当番）。', avvisoSotto:'下の薬局は今日{ora}から当番です。', avvisoGenerico:'⚠️ 下の当番は今日{ora}からです：それまでは別の薬局が当番です。' },
+  ko: { cerca:'당번 찾기', chiudi:'닫기', perData:'날짜별', perFarmacia:'약국별', scegli:'— 약국 선택 —', turno24h:'24시간 당번', nessunDato:'이 날짜의 데이터가 없습니다.', nessunFuturo:'이 약국의 예정된 당번이 없습니다.', finoAlle:'{ora}까지',
+        avviso:'⚠️ {ora}까지 당번 약국은 아직 {farm}입니다(어제 당번).', avvisoSotto:'아래 약국은 오늘 {ora}부터 당번입니다.', avvisoGenerico:'⚠️ 아래 당번은 오늘 {ora}부터 시작합니다: 그때까지는 다른 약국이 당번입니다.' }
+};
 let LANG = 'it';
 let langResetTimer = null;
 function t(k) { return (I18N[LANG] && I18N[LANG][k]) || I18N.it[k] || k; }
+// Testi del pannello "Cerca turno" (I18N_CERCA), con il segnaposto {ora} già sostituito.
+function tc(k, ora) {
+  const s = (I18N_CERCA[LANG] && I18N_CERCA[LANG][k]) || I18N_CERCA.it[k] || k;
+  return ora === undefined ? s : s.split('{ora}').join(ora);
+}
+// Etichette fisse del pannello di ricerca (chiamata da applyLang).
+function applyLangRicerca() {
+  const fab = document.getElementById('searchFab');
+  fab.title = tc('cerca'); fab.setAttribute('aria-label', tc('cerca'));
+  fab.querySelector('.search-fab-label').textContent = tc('cerca');
+  document.querySelector('#searchOverlay .search-title').textContent = tc('cerca');
+  document.querySelector('#searchOverlay .search-close').setAttribute('aria-label', tc('chiudi'));
+  document.getElementById('searchTabData').textContent = tc('perData');
+  document.getElementById('searchTabFarm').textContent = tc('perFarmacia');
+  // Segnaposto della tendina farmacie (la tendina si popola una volta sola: qui si
+  // aggiorna solo il testo della prima voce, senza toccare la scelta fatta).
+  const segnaposto = document.querySelector('#searchFarmSelect option[value=""]');
+  if (segnaposto) segnaposto.textContent = tc('scegli');
+  // Pannello aperto: rifà le ricerche in corso, così i risultati passano subito alla nuova lingua.
+  if (document.getElementById('searchOverlay').style.display !== 'none') {
+    cercaPerData();
+    if (document.getElementById('searchFarmSelect').value) cercaPerFarmacia();
+  }
+}
 
 // Applica la lingua corrente: etichette statiche, verso del testo (RTL per l'arabo)
 // e ri-render delle parti dinamiche (che usano t()).
@@ -668,6 +739,7 @@ function applyLang() {
   // sul kiosk resta un simbolo senza link, per non uscire dalla bacheca.
   if (isMobile()) document.getElementById('waLink').href = 'https://wa.me/390187706147';
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === LANG));
+  applyLangRicerca();
   updateClock();
   renderAll();
 }
@@ -1234,6 +1306,12 @@ function riarmaChiusuraRicerca() {
   if (isMobile()) return;
   clearTimeout(searchIdleTimer);
   searchIdleTimer = setTimeout(chiudiRicerca, RICERCA_INATTIVITA_MS);
+  // Chi usa il pannello in un'altra lingua la sta usando: riparte anche il ritorno
+  // all'italiano (90 s, vedi setLang), così non cambia lingua mentre legge.
+  if (LANG !== 'it') {
+    clearTimeout(langResetTimer);
+    langResetTimer = setTimeout(() => setLang('it'), 90000);
+  }
 }
 // Un elemento con display:none non riceve eventi: basta ascoltare, senza controllare se è aperto.
 ['pointerdown', 'pointermove', 'click', 'focusin', 'keydown', 'input', 'change', 'scroll', 'wheel'].forEach(ev =>
@@ -1302,7 +1380,8 @@ function elencoFarmacieTurni() {
 }
 function popolaSelectFarmacie() {
   const sel = document.getElementById('searchFarmSelect');
-  sel.innerHTML = '<option value="" disabled selected>— Scegli una farmacia —</option>';
+  sel.innerHTML = '<option value="" disabled selected></option>';
+  sel.options[0].textContent = tc('scegli');
   elencoFarmacieTurni().forEach(n => {
     const opt = document.createElement('option');
     opt.value = n; opt.textContent = n;
@@ -1322,7 +1401,17 @@ function buildSearchCard(ruolo, nome, meta) {
   const contact = document.createElement('div'); contact.className = 'search-result-meta';
   renderContactInto(contact, nome);
   card.appendChild(contact);
-  if (meta) { const m = document.createElement('div'); m.className = 'search-result-meta'; m.textContent = meta; card.appendChild(m); }
+  // meta: elenco di pezzi (data, fine turno, note…) uniti da " · ". Ogni pezzo sta in un
+  // <bdi>: in arabo (riga RTL) una nota in italiano o un orario non si mescolano coi vicini.
+  if (meta && meta.length) {
+    const m = document.createElement('div');
+    m.className = 'search-result-meta search-result-info'; // search-result-info: RTL in arabo
+    meta.forEach((pezzo, i) => {
+      if (i) m.appendChild(document.createTextNode(' · '));
+      const b = document.createElement('bdi'); b.textContent = pezzo; m.appendChild(b);
+    });
+    card.appendChild(m);
+  }
   return card;
 }
 
@@ -1341,10 +1430,13 @@ function avvisoTurnoNotte(key, oggiHaDati) {
   // iniziato; se mancano anche quelli di oggi niente avviso, basta "Nessun dato".
   if (!attivo.turno || !attivo.turno.t) {
     if (!oggiHaDati) return null;
-    box.textContent = '⚠️ Il turno qui sotto inizia oggi alle ' + ora + ': fino ad allora è di turno un\'altra farmacia.';
+    box.textContent = tc('avvisoGenerico', ora);
     return box;
   }
-  box.appendChild(document.createTextNode('⚠️ Fino alle ' + ora + ' la farmacia di turno è ancora '));
+  // Il testo tradotto ha il segnaposto {farm} dove va il nome (pulsante): prima e dopo
+  // restano testo semplice, così ogni lingua mette il nome nel punto giusto della frase.
+  const [prima, dopo] = tc('avviso', ora).split('{farm}');
+  box.appendChild(document.createTextNode(prima));
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.textContent = 'Farm. ' + attivo.turno.t;
@@ -1353,7 +1445,8 @@ function avvisoTurnoNotte(key, oggiHaDati) {
   btn.onclick = () => { document.getElementById('searchDateInput').value = getTurnoAttivo().key; cercaPerData(); };
   box.appendChild(btn);
   // "Quella qui sotto" solo se sotto c'è davvero una farmacia (altrimenti c'è "Nessun dato").
-  box.appendChild(document.createTextNode(' (turno di ieri).' + (oggiHaDati ? ' Quella qui sotto inizia oggi alle ' + ora + '.' : '')));
+  const spazio = (LANG === 'ja' || LANG === 'zh') ? '' : ' '; // in giapponese e cinese le frasi non si separano con lo spazio
+  box.appendChild(document.createTextNode((dopo || '') + (oggiHaDati ? spazio + tc('avvisoSotto', ora) : '')));
   return box;
 }
 
@@ -1366,16 +1459,18 @@ function cercaPerData() {
   const avviso = avvisoTurnoNotte(key, !!(turno && turno.t));
   if (avviso) list.appendChild(avviso);
   if (!turno || !turno.t) {
-    list.insertAdjacentHTML('beforeend', '<div class="search-empty">Nessun dato per questa data.</div>'); // senza cancellare l'avviso
+    const vuoto = document.createElement('div'); // aggiunto senza cancellare l'avviso
+    vuoto.className = 'search-empty'; vuoto.textContent = tc('nessunDato');
+    list.appendChild(vuoto);
     return;
   }
   const dataTxt = fmtDate(new Date(key + 'T00:00:00'));
   const bits = [dataTxt, t('shiftEnd') + ' ' + fmtFineTurno(fineTurnoGiorno(key))];
   if (turno.straord) bits.push('★ ' + turno.straord);
   if (turno.nota) bits.push('📌 ' + turno.nota);
-  if (turno.modificato) bits.push('✎ modificato');
-  list.appendChild(buildSearchCard('Turno 24h', turno.t, bits.join(' · ')));
-  if (turno.c) list.appendChild(buildSearchCard('Conturno', turno.c, dataTxt + ' · fino alle ' + statoConturno(key).fine));
+  if (turno.modificato) bits.push('✎ ' + t('modified'));
+  list.appendChild(buildSearchCard(tc('turno24h'), turno.t, bits));
+  if (turno.c) list.appendChild(buildSearchCard(t('conturno'), turno.c, [dataTxt, tc('finoAlle', statoConturno(key).fine)]));
 }
 
 // Prossimi turni futuri (da oggi in poi, farmacia scelta come turno 24h o conturno).
@@ -1397,12 +1492,18 @@ function cercaPerFarmacia() {
     const d = new Date(key + 'T00:00:00');
     const item = document.createElement('div');
     item.className = 'search-farm-item';
-    const giorno = d.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
-    const ruolo = isTurno ? 'Turno 24h' : 'Conturno';
-    item.innerHTML = `<span>${giorno}</span><span class="role">${ruolo}</span>`;
+    const giorno = d.toLocaleDateString(LOCALE[LANG] || 'it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+    const ruolo = isTurno ? tc('turno24h') : t('conturno');
+    const sG = document.createElement('span'); sG.textContent = giorno;
+    const sR = document.createElement('span'); sR.className = 'role'; sR.textContent = ruolo;
+    item.appendChild(sG); item.appendChild(sR);
     list.appendChild(item);
   });
-  if (!trovati) list.innerHTML = '<div class="search-empty">Nessun turno futuro trovato per questa farmacia.</div>';
+  if (!trovati) {
+    const vuoto = document.createElement('div');
+    vuoto.className = 'search-empty'; vuoto.textContent = tc('nessunFuturo');
+    list.appendChild(vuoto);
+  }
 }
 
 // Mappa Leaflet con i marker delle farmacie aperte (turno + conturno se aperto)
