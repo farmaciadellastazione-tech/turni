@@ -1325,18 +1325,23 @@ function buildSearchCard(ruolo, nome, meta) {
 // Avviso tra mezzanotte e le 08:30 quando si cerca la data di oggi: il turno di oggi non è
 // ancora iniziato, la farmacia di turno in questo momento è quella di ieri. Il nome è un
 // pulsante che riporta la ricerca sul turno in corso. Ritorna null se l'avviso non serve.
-function avvisoTurnoNotte(key) {
+function avvisoTurnoNotte(key, oggiHaDati) {
   const attivo = getTurnoAttivo();
   if (key !== toKey(new Date()) || attivo.key === key || !attivo.turno || !attivo.turno.t) return null;
+  // Ora del cambio turno dallo stesso calcolo della "Fine turno" (fineTurnoGiorno): "08:30".
+  const ora = fmtFineTurno(attivo.fine).split(' ')[1];
   const box = document.createElement('div');
   box.className = 'search-avviso';
-  box.appendChild(document.createTextNode('⚠️ Fino alle 08:30 la farmacia di turno è ancora '));
+  box.appendChild(document.createTextNode('⚠️ Fino alle ' + ora + ' la farmacia di turno è ancora '));
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.textContent = 'Farm. ' + attivo.turno.t;
-  btn.onclick = () => { document.getElementById('searchDateInput').value = attivo.key; cercaPerData(); };
+  // Il turno in corso si ricalcola al tocco: se nel frattempo sono passate le 08:30 si va
+  // sul turno di oggi, non su quello (ormai finito) di quando l'avviso è comparso.
+  btn.onclick = () => { document.getElementById('searchDateInput').value = getTurnoAttivo().key; cercaPerData(); };
   box.appendChild(btn);
-  box.appendChild(document.createTextNode(' (turno di ieri). Quella qui sotto inizia oggi alle 08:30.'));
+  // "Quella qui sotto" solo se sotto c'è davvero una farmacia (altrimenti c'è "Nessun dato").
+  box.appendChild(document.createTextNode(' (turno di ieri).' + (oggiHaDati ? ' Quella qui sotto inizia oggi alle ' + ora + '.' : '')));
   return box;
 }
 
@@ -1345,9 +1350,9 @@ function cercaPerData() {
   const list = document.getElementById('searchResultsData');
   list.innerHTML = '';
   if (!key) return;
-  const avviso = avvisoTurnoNotte(key);
-  if (avviso) list.appendChild(avviso);
   const turno = getTurnoGiorno(key);
+  const avviso = avvisoTurnoNotte(key, !!(turno && turno.t));
+  if (avviso) list.appendChild(avviso);
   if (!turno || !turno.t) {
     list.insertAdjacentHTML('beforeend', '<div class="search-empty">Nessun dato per questa data.</div>'); // senza cancellare l'avviso
     return;
