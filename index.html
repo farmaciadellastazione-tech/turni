@@ -1221,6 +1221,10 @@ function riarmaChiusuraRicerca() {
 ['pointerdown', 'pointermove', 'click', 'focusin', 'keydown', 'input', 'change', 'scroll', 'wheel'].forEach(ev =>
   document.getElementById('searchOverlay').addEventListener(ev, riarmaChiusuraRicerca, { capture: true, passive: true }));
 
+// Giorno dell'ultima apertura del pannello: sul telefono la ricerca si conserva, ma solo
+// nello stesso giorno (riaperto giorni dopo, una data vecchia sembrerebbe il turno di oggi).
+let searchGiornoApertura = null;
+
 function apriRicerca() {
   document.getElementById('searchOverlay').style.display = '';
   riarmaChiusuraRicerca();
@@ -1230,8 +1234,14 @@ function apriRicerca() {
   const chiavi = Object.keys(TURNI_BASE).sort();
   const input = document.getElementById('searchDateInput');
   if (chiavi.length) { input.min = chiavi[0]; input.max = chiavi[chiavi.length - 1]; }
-  if (!input.value) input.value = toKey(new Date());
+  const oggi = toKey(new Date());
+  if (searchGiornoApertura !== oggi) input.value = '';
+  searchGiornoApertura = oggi;
+  if (!input.value) input.value = oggi;
   cercaPerData();
+  // I "prossimi turni" di una farmacia già scelta vanno ricalcolati: da un'apertura
+  // all'altra alcuni possono essere passati.
+  if (document.getElementById('searchFarmSelect').value) cercaPerFarmacia();
 }
 function chiudiRicerca() {
   const overlay = document.getElementById('searchOverlay');
