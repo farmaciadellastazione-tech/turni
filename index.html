@@ -1329,7 +1329,8 @@ function cercaPerData() {
     return;
   }
   const dataTxt = fmtDate(new Date(key + 'T00:00:00'));
-  const bits = [dataTxt, t('shiftEnd') + ' ' + fmtFineTurno(fineTurnoGiorno(key))];
+  // Testo fisso in italiano come il resto del pannello di ricerca (non tradotto).
+  const bits = [dataTxt, 'Fine turno: ' + fmtFineTurno(fineTurnoGiorno(key))];
   if (turno.straord) bits.push('★ ' + turno.straord);
   if (turno.nota) bits.push('📌 ' + turno.nota);
   if (turno.modificato) bits.push('✎ modificato');
