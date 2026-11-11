@@ -47,7 +47,16 @@
   body.rtl .servizi-title,
   body.rtl .annunci-box-title,
   body.rtl #footerLegal,
-  body.rtl .qr-text { direction: rtl; text-align: right; }
+  body.rtl .qr-text,
+  /* Pannello "Cerca turno": stesso criterio, solo i testi tradotti (titolo, schede, ruolo,
+     riga data/fine turno, avviso, messaggi); indirizzo/telefono della scheda restano LTR. */
+  body.rtl .search-title,
+  body.rtl .search-result-role,
+  body.rtl .search-result-info,
+  body.rtl .search-avviso,
+  body.rtl .search-empty,
+  body.rtl .search-farm-item { direction: rtl; text-align: right; }
+  body.rtl .search-tab { direction: rtl; } /* schede: RTL ma restano centrate */
   /* Colonne proporzionali (non px fissi): il kiosk è ad alta risoluzione (~3050×2250),
      una larghezza fissa renderebbe la colonna destra/mappa una sottile striscia. */
   /* grid-template-rows: minmax(0,1fr) vincola la riga all'altezza dello schermo (non al
@@ -1386,7 +1395,7 @@ function buildSearchCard(ruolo, nome, meta) {
   const contact = document.createElement('div'); contact.className = 'search-result-meta';
   renderContactInto(contact, nome);
   card.appendChild(contact);
-  if (meta) { const m = document.createElement('div'); m.className = 'search-result-meta'; m.textContent = meta; card.appendChild(m); }
+  if (meta) { const m = document.createElement('div'); m.className = 'search-result-meta search-result-info'; m.textContent = meta; card.appendChild(m); } // search-result-info: RTL in arabo
   return card;
 }
 
