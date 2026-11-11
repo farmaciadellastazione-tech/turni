@@ -1331,11 +1331,17 @@ function buildSearchCard(ruolo, nome, meta) {
 // pulsante che riporta la ricerca sul turno in corso. Ritorna null se l'avviso non serve.
 function avvisoTurnoNotte(key, oggiHaDati) {
   const attivo = getTurnoAttivo();
-  if (key !== toKey(new Date()) || attivo.key === key || !attivo.turno || !attivo.turno.t) return null;
+  if (key !== toKey(new Date()) || attivo.key === key) return null;
   // Ora del cambio turno dallo stesso calcolo della "Fine turno" (fineTurnoGiorno): "08:30".
   const ora = fmtOra(attivo.fine);
   const box = document.createElement('div');
   box.className = 'search-avviso';
+  // Senza i dati del turno di ieri (es. Capodanno con l'anno prima non caricato) non si può
+  // nominare la farmacia, ma si avvisa comunque che il turno di oggi non è ancora iniziato.
+  if (!attivo.turno || !attivo.turno.t) {
+    box.textContent = '⚠️ Il turno di oggi inizia alle ' + ora + '.' + (oggiHaDati ? ' Fino ad allora vale ancora quello di ieri.' : '');
+    return box;
+  }
   box.appendChild(document.createTextNode('⚠️ Fino alle ' + ora + ' la farmacia di turno è ancora '));
   const btn = document.createElement('button');
   btn.type = 'button';
