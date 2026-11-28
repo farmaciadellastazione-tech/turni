@@ -9,20 +9,20 @@ name: Aggiornamento turni da bollettino
 
 on:
   schedule:
-    - cron: '0 6 * * 1-6'   # lun-sab alle 06:00 UTC (~07/08 in Italia)
+    - cron: '13 6 * * 1-6'  # lun-sab alle 06:13 UTC (~07:13/08:13 in Italia); minuto non tondo: agli orari tondi GitHub ritarda o salta le esecuzioni
   workflow_dispatch: {}
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: dev
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Installa dipendenze root (imapflow, mailparser)
         run: npm ci
